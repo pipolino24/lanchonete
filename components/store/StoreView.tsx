@@ -10,7 +10,6 @@ import { ProductImage } from "@/components/store/ProductImage";
 import { ProductModal } from "@/components/store/ProductModal";
 import { CartPanel } from "@/components/store/CartPanel";
 import { CartSheet } from "@/components/store/CartSheet";
-import { Marquee } from "@/components/ui/Marquee";
 import { Reveal } from "@/components/ui/Reveal";
 import { Logo } from "@/components/brand/Logo";
 import { formatPrice } from "@/lib/money";
@@ -141,7 +140,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
                 <h2 className="mb-3 flex items-center gap-2 font-display text-xl font-bold text-cream">
                   <Star size={18} className="text-ember-500" fill="currentColor" /> Destaques
                 </h2>
-                <Marquee speed={36}>
+                <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
                   {data.featured.map((p) => (
                     <button
                       key={p.id}
@@ -158,7 +157,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
                       </div>
                     </button>
                   ))}
-                </Marquee>
+                </div>
               </section>
             )}
 

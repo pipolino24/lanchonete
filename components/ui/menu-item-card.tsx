@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Clock, Plus, Star } from "lucide-react";
 import { ProductImage } from "@/components/store/ProductImage";
 import { formatPrice } from "@/lib/money";
@@ -24,40 +25,54 @@ interface MenuItemCardProps {
 const cardVariants = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-  hover: { y: -4, transition: { duration: 0.2 } },
 };
 
-export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
-  (
-    {
-      className,
-      imageUrl,
-      emoji,
-      name,
-      description,
-      price,
-      originalPrice,
-      measure,
-      prepTimeInMinutes,
-      featured,
-      onAdd,
-    },
-    ref,
-  ) => {
-    const savings = originalPrice && originalPrice > price ? originalPrice - price : 0;
+export function MenuItemCard({
+  className,
+  imageUrl,
+  emoji,
+  name,
+  description,
+  price,
+  originalPrice,
+  measure,
+  prepTimeInMinutes,
+  featured,
+  onAdd,
+}: MenuItemCardProps) {
+  const savings = originalPrice && originalPrice > price ? originalPrice - price : 0;
 
-    return (
+  // Tilt 3D sutil que acompanha o mouse (movimento leve e macio)
+  const ref = useRef<HTMLDivElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 120, damping: 20, mass: 0.6 });
+  const sy = useSpring(my, { stiffness: 120, damping: 20, mass: 0.6 });
+  const rotateX = useTransform(sy, [-0.5, 0.5], [4.5, -4.5]);
+  const rotateY = useTransform(sx, [-0.5, 0.5], [-4.5, 4.5]);
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    mx.set((e.clientX - r.left) / r.width - 0.5);
+    my.set((e.clientY - r.top) / r.height - 0.5);
+  }
+  function onLeave() {
+    mx.set(0);
+    my.set(0);
+  }
+
+  return (
+    <div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} className={cn("[perspective:900px]", className)}>
       <motion.div
-        ref={ref}
         variants={cardVariants}
         initial="initial"
         whileInView="animate"
-        whileHover="hover"
+        whileHover={{ y: -4 }}
         viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-        className={cn(
-          "group surface relative flex w-full flex-col overflow-hidden rounded-2xl shadow-warm",
-          className,
-        )}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className="group surface relative flex w-full flex-col overflow-hidden rounded-2xl shadow-warm"
       >
         {/* Imagem + botão Adicionar */}
         <button onClick={onAdd} className="relative block overflow-hidden text-left" aria-label={`Adicionar ${name}`}>
@@ -108,8 +123,6 @@ export const MenuItemCard = React.forwardRef<HTMLDivElement, MenuItemCardProps>(
           ) : null}
         </button>
       </motion.div>
-    );
-  },
-);
-
-MenuItemCard.displayName = "MenuItemCard";
+    </div>
+  );
+}

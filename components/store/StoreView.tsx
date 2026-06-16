@@ -11,6 +11,7 @@ import { ProductModal } from "@/components/store/ProductModal";
 import { CartPanel } from "@/components/store/CartPanel";
 import { CartSheet } from "@/components/store/CartSheet";
 import { Marquee } from "@/components/ui/Marquee";
+import { Reveal } from "@/components/ui/Reveal";
 import { Logo } from "@/components/brand/Logo";
 import { formatPrice } from "@/lib/money";
 import { useCart, cartCount, cartSubtotal } from "@/lib/cart-store";
@@ -163,15 +164,17 @@ export function StoreView({ data }: { data: StoreViewData }) {
 
             {data.categories.map((cat) => (
               <section key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-24 py-4">
-                <h2 className="mb-3 font-display text-xl font-bold text-cream">
-                  {cat.emoji ? `${cat.emoji} ` : ""}
-                  {cat.name}
-                </h2>
-                <div className="grid gap-2.5 xl:grid-cols-2">
-                  {cat.products.map((p) => (
-                    <ProductCard key={p.id} product={p} emoji={cat.emoji ?? "🍔"} onSelect={setSelectedProduct} />
-                  ))}
-                </div>
+                <Reveal>
+                  <h2 className="mb-3 font-display text-xl font-bold text-cream">
+                    {cat.emoji ? `${cat.emoji} ` : ""}
+                    {cat.name}
+                  </h2>
+                  <div className="grid gap-2.5 xl:grid-cols-2">
+                    {cat.products.map((p) => (
+                      <ProductCard key={p.id} product={p} emoji={cat.emoji ?? "🍔"} onSelect={setSelectedProduct} />
+                    ))}
+                  </div>
+                </Reveal>
               </section>
             ))}
             </>

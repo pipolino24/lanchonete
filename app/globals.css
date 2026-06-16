@@ -147,16 +147,6 @@ body::after {
 }
 .animate-flicker { animation: flicker 2.4s ease-in-out infinite; }
 
-/* ── Brasa viva: atmosfera de fundo respira lentamente ── */
-@keyframes ember-drift {
-  0%, 100% { opacity: 1; transform: translate3d(0, 0, 0); }
-  50% { opacity: 0.82; transform: translate3d(-1.5%, 1.2%, 0); }
-}
-body::before { animation: ember-drift 16s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  body::before { animation: none; }
-}
-
 /* ── Shimmer: varredura de brilho (botões "acesos") ── */
 @keyframes shimmer-sweep {
   0% { transform: translateX(-160%) skewX(-12deg); }
@@ -201,9 +191,49 @@ body::before { animation: ember-drift 16s ease-in-out infinite; }
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: spin-beam 6s linear infinite;
   pointer-events: none;
+  opacity: 0.7;
 }
+.border-beam-wrap:hover::before { animation: spin-beam 6s linear infinite; opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .shimmer::after, .border-beam-wrap::before, .animate-marquee { animation: none; }
 }
+
+/* ── Reveal no scroll (entrada suave, sem cara de template) ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+  will-change: opacity, transform;
+}
+.reveal-left { opacity: 0; transform: translateX(-26px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.reveal-right { opacity: 0; transform: translateX(26px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.reveal-blur { opacity: 0; filter: blur(10px); transform: translateY(12px); transition: opacity 0.8s var(--ease-out), filter 0.8s var(--ease-out), transform 0.8s var(--ease-out); }
+.is-visible { opacity: 1 !important; transform: none !important; filter: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-left, .reveal-right, .reveal-blur { opacity: 1; transform: none; filter: none; transition: none; }
+}
+
+/* ── Parallax/zoom lento em fotos de capa (vida, não foto estática) ── */
+@keyframes slow-zoom {
+  from { transform: scale(1.04); }
+  to { transform: scale(1.12); }
+}
+.animate-slow-zoom { animation: slow-zoom 18s ease-in-out infinite alternate; }
+
+/* ── Faísca subindo (brasa) ── */
+@keyframes spark-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translateY(-120px) scale(0.4); opacity: 0; }
+}
+
+/* ── Sublinhado “queimado” animado em links ── */
+.link-ember {
+  background-image: linear-gradient(var(--color-ember-500), var(--color-ember-500));
+  background-size: 0% 2px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.3s var(--ease-out);
+}
+.link-ember:hover { background-size: 100% 2px; }

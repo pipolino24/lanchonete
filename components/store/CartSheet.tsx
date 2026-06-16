@@ -800,6 +800,12 @@ export function CartSheet({
         {/* Rodapé */}
         {step !== "success" && (
           <div className="border-t border-coal-700 bg-coal-900 p-4">
+            {(step === "phone" || step === "code" || step === "register") && (
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="text-ash">Subtotal do pedido</span>
+                <PriceFlow cents={subtotal} className="text-base font-bold text-cream" />
+              </div>
+            )}
             {step === "cart" && (
               <>
                 <div className="mb-3 space-y-1">
@@ -850,18 +856,28 @@ export function CartSheet({
               </Button>
             )}
             {step === "address" && (
-              <Button
-                className="w-full"
-                disabled={!addressValid || blockedByArea || quoteLoading}
-                onClick={() => setStep("payment")}
-              >
-                {blockedByArea ? "Fora da área de entrega" : "Ir para pagamento"}
-              </Button>
+              <>
+                <div className="mb-3">
+                  <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!addressValid || blockedByArea || quoteLoading}
+                  onClick={() => setStep("payment")}
+                >
+                  {blockedByArea ? "Fora da área de entrega" : "Ir para pagamento"}
+                </Button>
+              </>
             )}
             {step === "payment" && (
-              <Button className="w-full" disabled={!payment} onClick={() => setStep("review")}>
-                Revisar pedido
-              </Button>
+              <>
+                <div className="mb-3">
+                  <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+                </div>
+                <Button className="w-full" disabled={!payment} onClick={() => setStep("review")}>
+                  Revisar pedido
+                </Button>
+              </>
             )}
             {step === "review" && (
               <Button

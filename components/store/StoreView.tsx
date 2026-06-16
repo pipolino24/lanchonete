@@ -47,7 +47,7 @@ function measureOf(p: MenuProduct): string | null {
 export function StoreView({ data }: { data: StoreViewData }) {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const [checkoutStep, setCheckoutStep] = useState<"cart" | "identify">("cart");
+  const [checkoutStep, setCheckoutStep] = useState<"cart" | "phone">("cart");
   const [query, setQuery] = useState("");
   const items = useCart((s) => s.items);
   const count = cartCount(items);
@@ -70,7 +70,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
     );
   }, [q, data.categories]);
 
-  function openCheckout(step: "cart" | "identify") {
+  function openCheckout(step: "cart" | "phone") {
     setCheckoutStep(step);
     setCartOpen(true);
   }
@@ -224,7 +224,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
               freeShippingAbove={data.freeShippingAbove}
               deliveryFeePreview={data.deliveryFeePreview}
               cartMessage={data.cartMessage}
-              onCheckout={() => openCheckout("identify")}
+              onCheckout={() => openCheckout("phone")}
             />
           </aside>
         </div>

@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
 import { Marquee } from "@/components/ui/Marquee";
+import { LocationCard } from "@/components/ui/location-card";
 import { ProductImage } from "@/components/store/ProductImage";
 import { prisma } from "@/lib/prisma";
 import { isOpenNow } from "@/lib/store-hours";
@@ -38,6 +39,19 @@ export default async function Home() {
   const hero = featured[0] ?? heroProducts[0];
   const wa = waLink(store?.whatsapp);
   const cityLine = store?.city ? `${store.neighborhood ? store.neighborhood + " · " : ""}${store.city}${store.state ? "-" + store.state : ""}` : "Crato-CE";
+  const addressLine =
+    [
+      store?.street ? `${store.street}, ${store.number ?? ""}`.trim() : null,
+      store?.neighborhood,
+      store?.city ? `${store.city}${store.state ? "-" + store.state : ""}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || cityLine;
+  const mapsDest =
+    store?.lat != null && store?.lng != null
+      ? `${store.lat},${store.lng}`
+      : encodeURIComponent(`${store?.name ?? "Cariri Burguer"} ${addressLine}`);
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapsDest}`;
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -174,6 +188,34 @@ export default async function Home() {
           </Marquee>
         </section>
       )}
+
+      {/* Onde estamos — card de localização com tilt 3D */}
+      <section className="mx-auto grid max-w-7xl items-center gap-8 px-5 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+        <Reveal>
+          <span className="inline-flex items-center gap-2 rounded-full border border-coal-700 bg-coal-850/70 px-3 py-1 text-xs font-medium uppercase tracking-widest text-ash">
+            <MapPin size={13} className="text-ember-500" /> Onde estamos
+          </span>
+          <h2 className="mt-4 font-display text-4xl font-bold uppercase leading-[0.95] text-cream sm:text-5xl">
+            Passe na loja
+            <br />
+            <span className="text-ember-500">e sinta a brasa.</span>
+          </h2>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-ash">
+            Estamos te esperando para retirada no balcão ou para comer por aqui mesmo.
+            Toque em “Como chegar” e a gente te guia até a porta.
+          </p>
+        </Reveal>
+
+        <Reveal variant="right">
+          <LocationCard
+            name={store?.name ?? "Cariri Burguer"}
+            addressLine={addressLine}
+            mapsUrl={mapsUrl}
+            open={open}
+            whatsappUrl={wa}
+          />
+        </Reveal>
+      </section>
 
       {/* Rodapé com info real (menos genérico) */}
       <footer className="mx-auto max-w-7xl px-5 py-12 lg:px-8">

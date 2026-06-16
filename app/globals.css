@@ -39,6 +39,27 @@
   --color-warning: #e8a13c;
   --color-danger: #e5544d;
 
+  /* Compatibilidade shadcn/ui — mapeada para a paleta smokehouse */
+  --color-background: var(--color-coal-950);
+  --color-foreground: var(--color-cream);
+  --color-card: var(--color-coal-850);
+  --color-card-foreground: var(--color-cream);
+  --color-popover: var(--color-coal-850);
+  --color-popover-foreground: var(--color-cream);
+  --color-primary: var(--color-ember-500);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-coal-750);
+  --color-secondary-foreground: var(--color-cream);
+  --color-muted: var(--color-coal-800);
+  --color-muted-foreground: var(--color-ash);
+  --color-accent: var(--color-coal-800);
+  --color-accent-foreground: var(--color-cream);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--color-coal-700);
+  --color-input: var(--color-coal-700);
+  --color-ring: var(--color-ember-500);
+
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
 }

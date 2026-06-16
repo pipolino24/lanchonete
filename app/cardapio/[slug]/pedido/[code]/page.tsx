@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Check, Clock, MapPin, ChevronLeft } from "lucide-react";
+import { Clock, MapPin, ChevronLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
-import { Emblem } from "@/components/brand/Logo";
-import { cn } from "@/lib/utils";
+import { OrderTrackingParallaxCard } from "@/components/ui/order-tracking-parallax-card";
 
 export const dynamic = "force-dynamic";
 
@@ -44,53 +43,14 @@ export default async function PedidoPage({
         <ChevronLeft size={16} /> Voltar ao cardápio
       </Link>
 
-      <div className="surface rounded-2xl p-5 shadow-warm">
-        <div className="flex items-center gap-3">
-          <Emblem size="md" />
-          <div className="flex-1">
-            <p className="text-xs text-ash-dark">Pedido</p>
-            <h1 className="font-display text-2xl font-bold text-cream">#{order.code}</h1>
-          </div>
-          <span
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-semibold ring-1",
-              canceled
-                ? "bg-danger/15 text-danger ring-danger/25"
-                : order.status === "COMPLETED"
-                  ? "bg-success/15 text-success ring-success/25"
-                  : "bg-ember-500/15 text-ember-400 ring-ember-500/25",
-            )}
-          >
-            {canceled ? "Cancelado" : STEPS[currentIdx]?.label ?? "Recebido"}
-          </span>
-        </div>
-
-        {/* Timeline */}
-        {!canceled && (
-          <div className="mt-6 flex items-center">
-            {STEPS.map((s, i) => (
-              <div key={s.key} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={cn(
-                      "grid h-8 w-8 place-items-center rounded-full text-xs font-bold",
-                      i <= currentIdx ? "bg-ember-500 text-white" : "bg-coal-800 text-ash-dark",
-                    )}
-                  >
-                    {i < currentIdx ? <Check size={15} /> : i + 1}
-                  </div>
-                  <span className={cn("mt-1 text-center text-[10px]", i <= currentIdx ? "text-cream" : "text-ash-dark")}>
-                    {s.label}
-                  </span>
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div className={cn("mx-1 h-0.5 flex-1 rounded", i < currentIdx ? "bg-ember-500" : "bg-coal-800")} />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <OrderTrackingParallaxCard
+        code={order.code}
+        steps={STEPS}
+        currentIdx={currentIdx}
+        canceled={canceled}
+        etaMinutes={order.status === "COMPLETED" ? null : store.prepTime}
+        destination={order.addressSnapshot}
+      />
 
       {/* Itens */}
       <div className="surface mt-4 rounded-2xl p-5 shadow-warm">

@@ -5,7 +5,7 @@ import { ShoppingBag, Star, Search, X } from "lucide-react";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CategoryNav } from "@/components/store/CategoryNav";
 import { DesktopCategoryRail } from "@/components/store/DesktopCategoryRail";
-import { ProductCard } from "@/components/store/ProductCard";
+import { MenuItemCard } from "@/components/ui/menu-item-card";
 import { ProductImage } from "@/components/store/ProductImage";
 import { ProductModal } from "@/components/store/ProductModal";
 import { CartPanel } from "@/components/store/CartPanel";
@@ -34,7 +34,15 @@ export type StoreViewData = {
   pixKey: string | null;
   pixKeyType: string | null;
   cartMessage: string | null;
+  prepTime: number;
 };
+
+function measureOf(p: MenuProduct): string | null {
+  const parts: string[] = [];
+  if (p.measureValue) parts.push(`${p.measureValue}${p.measureUnit ?? ""}`);
+  if (p.serves) parts.push(`Serve ${p.serves}`);
+  return parts.join(" · ") || null;
+}
 
 export function StoreView({ data }: { data: StoreViewData }) {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
@@ -126,9 +134,21 @@ export function StoreView({ data }: { data: StoreViewData }) {
                 {searchResults.length === 0 ? (
                   <p className="py-10 text-center text-ash">Nada encontrado. Tente outro termo.</p>
                 ) : (
-                  <div className="grid gap-2.5 xl:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
                     {searchResults.map(({ product, emoji }) => (
-                      <ProductCard key={product.id} product={product} emoji={emoji ?? "🍔"} onSelect={setSelectedProduct} />
+                      <MenuItemCard
+                        key={product.id}
+                        imageUrl={product.images[0]}
+                        emoji={emoji ?? "🍔"}
+                        name={product.name}
+                        description={product.description}
+                        price={product.promoPrice ?? product.price}
+                        originalPrice={product.promoPrice != null ? product.price : null}
+                        measure={measureOf(product)}
+                        prepTimeInMinutes={data.prepTime}
+                        featured={product.featured}
+                        onAdd={() => setSelectedProduct(product.id)}
+                      />
                     ))}
                   </div>
                 )}
@@ -168,9 +188,21 @@ export function StoreView({ data }: { data: StoreViewData }) {
                     {cat.emoji ? `${cat.emoji} ` : ""}
                     {cat.name}
                   </h2>
-                  <div className="grid gap-2.5 xl:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
                     {cat.products.map((p) => (
-                      <ProductCard key={p.id} product={p} emoji={cat.emoji ?? "🍔"} onSelect={setSelectedProduct} />
+                      <MenuItemCard
+                        key={p.id}
+                        imageUrl={p.images[0]}
+                        emoji={cat.emoji ?? "🍔"}
+                        name={p.name}
+                        description={p.description}
+                        price={p.promoPrice ?? p.price}
+                        originalPrice={p.promoPrice != null ? p.price : null}
+                        measure={measureOf(p)}
+                        prepTimeInMinutes={data.prepTime}
+                        featured={p.featured}
+                        onAdd={() => setSelectedProduct(p.id)}
+                      />
                     ))}
                   </div>
                 </Reveal>

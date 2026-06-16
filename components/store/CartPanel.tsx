@@ -1,7 +1,10 @@
 "use client";
 
 import { ShoppingBag, Plus, Minus, Trash2, Bike, Store, Flame } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import NumberFlow from "@number-flow/react";
 import { Button } from "@/components/ui/Button";
+import { PriceFlow } from "@/components/ui/PriceFlow";
 import { formatPrice } from "@/lib/money";
 import { useCart, cartSubtotal, lineTotal, type OrderType } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
@@ -75,35 +78,45 @@ export function CartPanel({
               </div>
             )}
 
-            {items.map((it) => (
-              <div key={it.lineId} className="rounded-xl border border-coal-800 bg-coal-850 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-cream">{it.name}</p>
-                  <button onClick={() => removeItem(it.lineId)} className="text-ash-dark hover:text-danger">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-                {it.complements.map((c) => (
-                  <p key={c.itemId} className="text-xs text-ash">+ {c.quantity}× {c.name}</p>
-                ))}
-                {it.removedIngredients.map((r) => (
-                  <p key={r} className="text-xs text-danger">− {r}</p>
-                ))}
-                {it.note && <p className="text-xs italic text-ash-dark">“{it.note}”</p>}
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-ember-400">{formatPrice(lineTotal(it))}</span>
-                  <div className="inline-flex items-center rounded-lg bg-coal-800 ring-1 ring-coal-700">
-                    <button onClick={() => updateQty(it.lineId, -1)} className="grid h-7 w-7 place-items-center text-ember-400">
-                      <Minus size={14} strokeWidth={3} />
-                    </button>
-                    <span className="w-6 text-center text-sm text-cream">{it.quantity}</span>
-                    <button onClick={() => updateQty(it.lineId, 1)} className="grid h-7 w-7 place-items-center text-ember-400">
-                      <Plus size={14} strokeWidth={3} />
+            <AnimatePresence initial={false} mode="popLayout">
+              {items.map((it) => (
+                <motion.div
+                  key={it.lineId}
+                  layout
+                  initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -24, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                  className="overflow-hidden rounded-xl border border-coal-800 bg-coal-850 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-cream">{it.name}</p>
+                    <button onClick={() => removeItem(it.lineId)} className="text-ash-dark transition-colors hover:text-danger">
+                      <Trash2 size={15} />
                     </button>
                   </div>
-                </div>
-              </div>
-            ))}
+                  {it.complements.map((c) => (
+                    <p key={c.itemId} className="text-xs text-ash">+ {c.quantity}× {c.name}</p>
+                  ))}
+                  {it.removedIngredients.map((r) => (
+                    <p key={r} className="text-xs text-danger">− {r}</p>
+                  ))}
+                  {it.note && <p className="text-xs italic text-ash-dark">“{it.note}”</p>}
+                  <div className="mt-2 flex items-center justify-between">
+                    <PriceFlow cents={lineTotal(it)} className="text-sm font-semibold text-ember-400" />
+                    <div className="inline-flex items-center rounded-lg bg-coal-800 ring-1 ring-coal-700">
+                      <button onClick={() => updateQty(it.lineId, -1)} className="grid h-7 w-7 place-items-center text-ember-400 transition-transform active:scale-90">
+                        <Minus size={14} strokeWidth={3} />
+                      </button>
+                      <NumberFlow value={it.quantity} className="w-6 text-center text-sm text-cream" />
+                      <button onClick={() => updateQty(it.lineId, 1)} className="grid h-7 w-7 place-items-center text-ember-400 transition-transform active:scale-90">
+                        <Plus size={14} strokeWidth={3} />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           <div className="border-t border-coal-800 p-4">
@@ -122,7 +135,7 @@ export function CartPanel({
               )}
               <div className="flex justify-between border-t border-coal-800 pt-1 text-base font-bold text-cream">
                 <span>Total</span>
-                <span>{formatPrice(total)}</span>
+                <PriceFlow cents={total} />
               </div>
             </div>
             {belowMin && (

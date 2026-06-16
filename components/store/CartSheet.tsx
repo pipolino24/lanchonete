@@ -6,7 +6,10 @@ import {
   X, ChevronLeft, Trash2, Plus, Minus, Bike, ShoppingBag,
   Banknote, QrCode, CreditCard, Check, Loader2, PartyPopper, Flame, Copy,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import NumberFlow from "@number-flow/react";
 import { Button } from "@/components/ui/Button";
+import { PriceFlow } from "@/components/ui/PriceFlow";
 import { formatPrice } from "@/lib/money";
 import {
   useCart, cartSubtotal, lineTotal, type OrderType, type CartLine,
@@ -302,18 +305,45 @@ export function CartSheet({
           )}
 
           {step === "success" && (
-            <div className="grid place-items-center py-8 text-center">
-              <div className="grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success">
-                <PartyPopper size={32} />
+            <div className="relative grid place-items-center overflow-hidden py-8 text-center">
+              {/* faíscas de comemoração */}
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-32" aria-hidden>
+                {[8, 24, 40, 58, 72, 90].map((left, i) => (
+                  <span
+                    key={left}
+                    className="absolute top-16 h-1.5 w-1.5 rounded-full bg-ember-400"
+                    style={{ left: `${left}%`, animation: `spark-rise ${2.4 + (i % 3) * 0.5}s ease-in ${i * 0.3}s infinite` }}
+                  />
+                ))}
               </div>
-              <h3 className="mt-4 font-display text-2xl font-bold text-cream">Pedido confirmado!</h3>
+              <motion.div
+                initial={{ scale: 0, rotate: -25 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 12 }}
+                className="relative grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success ring-4 ring-success/10"
+              >
+                <PartyPopper size={32} />
+              </motion.div>
+              <motion.h3
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="mt-4 font-display text-2xl font-bold text-cream"
+              >
+                Pedido confirmado!
+              </motion.h3>
               <p className="mt-1 text-ash">
                 Código <span className="font-semibold text-ember-400">{orderCode}</span>
               </p>
               <p className="mt-2 max-w-xs text-sm text-ash">
                 Já recebemos seu pedido e ele está sendo preparado. 🔥
               </p>
-              <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6 flex w-full max-w-xs flex-col gap-2"
+              >
                 {orderCode && (
                   <Link href={`/cardapio/${slug}/pedido/${encodeURIComponent(orderCode)}`}>
                     <Button className="w-full">Acompanhar pedido</Button>
@@ -322,7 +352,7 @@ export function CartSheet({
                 <Button variant="ghost" onClick={onClose}>
                   Voltar ao cardápio
                 </Button>
-              </div>
+              </motion.div>
             </div>
           )}
         </div>
@@ -403,37 +433,47 @@ function CartStep({
     <div className="space-y-4">
       <TypeToggle orderType={orderType} onType={onType} />
       <div className="space-y-3">
-        {items.map((it) => (
-          <div key={it.lineId} className="rounded-xl border border-coal-800 bg-coal-850 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-medium text-cream">{it.name}</p>
-                {it.complements.map((c) => (
-                  <p key={c.itemId} className="text-xs text-ash">+ {c.quantity}× {c.name}</p>
-                ))}
-                {it.removedIngredients.map((r) => (
-                  <p key={r} className="text-xs text-danger">− {r}</p>
-                ))}
-                {it.note && <p className="mt-0.5 text-xs italic text-ash-dark">“{it.note}”</p>}
-              </div>
-              <button onClick={() => onRemove(it.lineId)} className="text-ash-dark hover:text-danger">
-                <Trash2 size={16} />
-              </button>
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="font-semibold text-ember-400">{formatPrice(lineTotal(it))}</span>
-              <div className="inline-flex items-center rounded-lg bg-coal-800 ring-1 ring-coal-700">
-                <button onClick={() => onQty(it.lineId, -1)} className="grid h-8 w-8 place-items-center text-ember-400">
-                  <Minus size={15} strokeWidth={3} />
-                </button>
-                <span className="w-6 text-center text-sm text-cream">{it.quantity}</span>
-                <button onClick={() => onQty(it.lineId, 1)} className="grid h-8 w-8 place-items-center text-ember-400">
-                  <Plus size={15} strokeWidth={3} />
+        <AnimatePresence initial={false} mode="popLayout">
+          {items.map((it) => (
+            <motion.div
+              key={it.lineId}
+              layout
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, x: -24, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              className="overflow-hidden rounded-xl border border-coal-800 bg-coal-850 p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-cream">{it.name}</p>
+                  {it.complements.map((c) => (
+                    <p key={c.itemId} className="text-xs text-ash">+ {c.quantity}× {c.name}</p>
+                  ))}
+                  {it.removedIngredients.map((r) => (
+                    <p key={r} className="text-xs text-danger">− {r}</p>
+                  ))}
+                  {it.note && <p className="mt-0.5 text-xs italic text-ash-dark">“{it.note}”</p>}
+                </div>
+                <button onClick={() => onRemove(it.lineId)} className="text-ash-dark transition-colors hover:text-danger">
+                  <Trash2 size={16} />
                 </button>
               </div>
-            </div>
-          </div>
-        ))}
+              <div className="mt-2 flex items-center justify-between">
+                <PriceFlow cents={lineTotal(it)} className="font-semibold text-ember-400" />
+                <div className="inline-flex items-center rounded-lg bg-coal-800 ring-1 ring-coal-700">
+                  <button onClick={() => onQty(it.lineId, -1)} className="grid h-8 w-8 place-items-center text-ember-400 transition-transform active:scale-90">
+                    <Minus size={15} strokeWidth={3} />
+                  </button>
+                  <NumberFlow value={it.quantity} className="w-6 text-center text-sm text-cream" />
+                  <button onClick={() => onQty(it.lineId, 1)} className="grid h-8 w-8 place-items-center text-ember-400 transition-transform active:scale-90">
+                    <Plus size={15} strokeWidth={3} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       <button onClick={onAddMore} className="w-full rounded-xl border border-dashed border-coal-700 py-2.5 text-sm font-medium text-ember-400 hover:bg-coal-850">
         + Adicionar mais itens
@@ -500,7 +540,7 @@ function Totals({ subtotal, deliveryFee, orderType, total }: { subtotal: number;
       )}
       <div className="flex justify-between border-t border-coal-800 pt-1 text-base font-bold text-cream">
         <span>Total</span>
-        <span>{formatPrice(total)}</span>
+        <PriceFlow cents={total} />
       </div>
     </div>
   );

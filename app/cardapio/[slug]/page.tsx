@@ -58,6 +58,7 @@ export default async function CardapioPage({
     pixKey: store.pixKey,
     pixKeyType: store.pixKeyType,
     cartMessage: store.cartMessage,
+    prepTime: store.prepTime,
   };
 
   return <StoreView data={data} />;

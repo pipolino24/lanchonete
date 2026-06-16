@@ -43,6 +43,8 @@ model Store {
   pixKey     String?
   pixKeyType String?
 
+  cartMessage String? // recado exibido no carrinho do cliente
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

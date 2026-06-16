@@ -51,6 +51,7 @@ export async function salvarLoja(formData: FormData) {
       zipCode: optional(formData, "zipCode"),
       pixKey: optional(formData, "pixKey"),
       pixKeyType,
+      cartMessage: optional(formData, "cartMessage"),
     },
   });
 

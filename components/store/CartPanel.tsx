@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Plus, Minus, Trash2, Bike, Store } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Trash2, Bike, Store, Flame } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/money";
 import { useCart, cartSubtotal, lineTotal, type OrderType } from "@/lib/cart-store";
@@ -10,11 +10,13 @@ export function CartPanel({
   minOrder,
   freeShippingAbove,
   deliveryFeePreview,
+  cartMessage,
   onCheckout,
 }: {
   minOrder: number;
   freeShippingAbove: number | null;
   deliveryFeePreview: number;
+  cartMessage?: string | null;
   onCheckout: () => void;
 }) {
   const { items, orderType, setOrderType, updateQty, removeItem } = useCart();
@@ -65,6 +67,13 @@ export function CartPanel({
                 </button>
               ))}
             </div>
+
+            {cartMessage && (
+              <div className="flex items-start gap-2 rounded-xl border border-ember-500/25 bg-ember-500/10 p-3 text-xs text-ember-300">
+                <Flame size={15} className="mt-0.5 shrink-0 text-ember-400" />
+                <span>{cartMessage}</span>
+              </div>
+            )}
 
             {items.map((it) => (
               <div key={it.lineId} className="rounded-xl border border-coal-800 bg-coal-850 p-3">

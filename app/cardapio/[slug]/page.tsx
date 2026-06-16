@@ -55,6 +55,9 @@ export default async function CardapioPage({
       enabledDelivery: p.enabledDelivery,
       enabledPickup: p.enabledPickup,
     })),
+    pixKey: store.pixKey,
+    pixKeyType: store.pixKeyType,
+    cartMessage: store.cartMessage,
   };
 
   return <StoreView data={data} />;

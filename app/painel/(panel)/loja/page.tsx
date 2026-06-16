@@ -128,6 +128,21 @@ export default async function LojaPage() {
           </div>
         </Card>
 
+        <Card>
+          <h2 className="mb-1 font-semibold text-cream">Recado no carrinho</h2>
+          <p className="mb-3 text-sm text-ash">
+            Mensagem exibida ao cliente no carrinho (promoções, avisos). Deixe vazio para não exibir.
+          </p>
+          <textarea
+            name="cartMessage"
+            defaultValue={store.cartMessage ?? ""}
+            rows={2}
+            maxLength={160}
+            className={`${inputCls} resize-none`}
+            placeholder="Ex.: Acima de R$ 80 a entrega é por nossa conta!"
+          />
+        </Card>
+
         <div className="flex justify-end">
           <Button type="submit">Salvar alterações</Button>
         </div>

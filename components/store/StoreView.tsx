@@ -30,6 +30,9 @@ export type StoreViewData = {
   categories: { id: string; name: string; emoji: string | null; products: MenuProduct[] }[];
   featured: MenuProduct[];
   payments: { method: PaymentMethod; enabledDelivery: boolean; enabledPickup: boolean }[];
+  pixKey: string | null;
+  pixKeyType: string | null;
+  cartMessage: string | null;
 };
 
 export function StoreView({ data }: { data: StoreViewData }) {
@@ -185,6 +188,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
               minOrder={data.minOrder}
               freeShippingAbove={data.freeShippingAbove}
               deliveryFeePreview={data.deliveryFeePreview}
+              cartMessage={data.cartMessage}
               onCheckout={() => openCheckout("identify")}
             />
           </aside>
@@ -218,6 +222,9 @@ export function StoreView({ data }: { data: StoreViewData }) {
           freeShippingAbove={data.freeShippingAbove}
           deliveryFeePreview={data.deliveryFeePreview}
           payments={data.payments}
+          pixKey={data.pixKey}
+          pixKeyType={data.pixKeyType}
+          cartMessage={data.cartMessage}
           initialStep={checkoutStep}
           onClose={() => setCartOpen(false)}
           onAddMore={() => setCartOpen(false)}

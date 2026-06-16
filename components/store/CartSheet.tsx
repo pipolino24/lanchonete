@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   X, ChevronLeft, Trash2, Plus, Minus, Bike, ShoppingBag,
-  Banknote, QrCode, CreditCard, Check, Loader2, PartyPopper,
+  Banknote, QrCode, CreditCard, Check, Loader2, PartyPopper, Flame, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/money";
@@ -31,6 +31,9 @@ export function CartSheet({
   freeShippingAbove,
   deliveryFeePreview,
   payments,
+  pixKey,
+  pixKeyType,
+  cartMessage,
   initialStep = "cart",
   onClose,
   onAddMore,
@@ -40,6 +43,9 @@ export function CartSheet({
   freeShippingAbove: number | null;
   deliveryFeePreview: number;
   payments: { method: PaymentMethod; enabledDelivery: boolean; enabledPickup: boolean }[];
+  pixKey?: string | null;
+  pixKeyType?: string | null;
+  cartMessage?: string | null;
   initialStep?: Step;
   onClose: () => void;
   onAddMore: () => void;
@@ -159,14 +165,22 @@ export function CartSheet({
 
         <div className="flex-1 overflow-y-auto p-4">
           {step === "cart" && (
-            <CartStep
-              items={items}
-              orderType={orderType}
-              onType={setOrderType}
-              onQty={updateQty}
-              onRemove={removeItem}
-              onAddMore={onAddMore}
-            />
+            <>
+              {cartMessage && items.length > 0 && (
+                <div className="mb-3 flex items-start gap-2 rounded-xl border border-ember-500/25 bg-ember-500/10 p-3 text-sm text-ember-300">
+                  <Flame size={16} className="mt-0.5 shrink-0 text-ember-400" />
+                  <span>{cartMessage}</span>
+                </div>
+              )}
+              <CartStep
+                items={items}
+                orderType={orderType}
+                onType={setOrderType}
+                onQty={updateQty}
+                onRemove={removeItem}
+                onAddMore={onAddMore}
+              />
+            </>
           )}
 
           {step === "identify" && (
@@ -246,6 +260,30 @@ export function CartSheet({
                     inputMode="decimal"
                   />
                 </Field>
+              )}
+              {payment === "PIX" && pixKey && (
+                <div className="rounded-xl border border-ember-500/25 bg-ember-500/10 p-3.5">
+                  <p className="text-xs text-ash">
+                    Chave Pix
+                    {pixKeyType
+                      ? ` · ${({ CPF: "CPF", CNPJ: "CNPJ", EMAIL: "E-mail", PHONE: "Telefone", RANDOM: "Aleatória" } as Record<string, string>)[pixKeyType] ?? pixKeyType}`
+                      : ""}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <code className="flex-1 break-all text-sm font-semibold text-cream">{pixKey}</code>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(pixKey)}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-coal-800 text-ember-400 ring-1 ring-coal-700 hover:bg-coal-750"
+                      title="Copiar chave"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-ash">
+                    Pague pela chave no app do seu banco e leve o comprovante na entrega/retirada.
+                  </p>
+                </div>
               )}
             </div>
           )}

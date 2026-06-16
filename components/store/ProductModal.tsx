@@ -305,6 +305,7 @@ export function ProductModal({
               />
               <Button
                 size="lg"
+                shimmer
                 className="flex-1 justify-between"
                 disabled={unmetRequired.length > 0}
                 onClick={handleAdd}

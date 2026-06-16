@@ -41,7 +41,7 @@ export function StatCard({
   hint,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   icon?: React.ReactNode;
   hint?: string;
 }) {

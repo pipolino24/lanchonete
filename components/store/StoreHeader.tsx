@@ -33,7 +33,7 @@ export function StoreHeader({ name, coverUrl, logoUrl, isOpen, minOrder, hours }
 
       {/* Cartão de identidade */}
       <div className="relative mx-auto -mt-14 max-w-7xl px-4 lg:px-6">
-        <div className="surface rounded-2xl p-4 shadow-warm backdrop-blur lg:p-5">
+        <div className="border-beam-wrap surface rounded-2xl p-4 shadow-warm backdrop-blur lg:p-5">
           <div className="flex items-start gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl ring-2 ring-ember-500/30 shadow-lg shadow-ember-600/20 lg:h-20 lg:w-20">
               {logoUrl ? (

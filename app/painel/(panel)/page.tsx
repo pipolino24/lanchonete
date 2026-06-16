@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
 import { PageHeader, StatCard, Card } from "@/components/admin/ui";
+import { NumberTicker } from "@/components/ui/NumberTicker";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +52,10 @@ export default async function DashboardPage() {
       <PageHeader title="Início" subtitle="Visão geral da sua operação hoje" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Faturamento hoje" value={formatPrice(faturamento)} icon={<DollarSign size={18} />} />
-        <StatCard label="Pedidos hoje" value={String(todayOrders.length)} icon={<ClipboardList size={18} />} />
-        <StatCard label="Clientes" value={String(totalCustomers)} icon={<Users size={18} />} />
-        <StatCard label="Ticket médio" value={formatPrice(ticket)} icon={<TrendingUp size={18} />} />
+        <StatCard label="Faturamento hoje" value={<NumberTicker value={faturamento} format="currency" />} icon={<DollarSign size={18} />} />
+        <StatCard label="Pedidos hoje" value={<NumberTicker value={todayOrders.length} />} icon={<ClipboardList size={18} />} />
+        <StatCard label="Clientes" value={<NumberTicker value={totalCustomers} />} icon={<Users size={18} />} />
+        <StatCard label="Ticket médio" value={<NumberTicker value={ticket} format="currency" />} icon={<TrendingUp size={18} />} />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">

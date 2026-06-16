@@ -128,7 +128,7 @@ export function CartPanel({
             {belowMin && (
               <p className="mb-2 text-center text-xs text-warning">Pedido mínimo de {formatPrice(minOrder)}</p>
             )}
-            <Button className="w-full" disabled={belowMin} onClick={onCheckout}>
+            <Button className="w-full" shimmer disabled={belowMin} onClick={onCheckout}>
               Finalizar pedido
             </Button>
           </div>

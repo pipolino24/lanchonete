@@ -354,7 +354,7 @@ export function CartSheet({
               </Button>
             )}
             {step === "review" && (
-              <Button className="w-full justify-between" disabled={submitting} onClick={submit}>
+              <Button className="w-full justify-between" shimmer disabled={submitting} onClick={submit}>
                 {submitting ? <Loader2 className="animate-spin" size={18} /> : <span>Fazer pedido</span>}
                 <span>{formatPrice(total)}</span>
               </Button>

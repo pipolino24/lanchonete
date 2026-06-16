@@ -23,10 +23,12 @@ const sizes: Record<Size, string> = {
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** Aplica a varredura de brilho "aceso" (use nos CTAs principais). */
+  shimmer?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", ...props }, ref) => {
+  ({ className, variant = "primary", size = "md", shimmer = false, ...props }, ref) => {
     return (
       <button
         ref={ref}
@@ -34,6 +36,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "inline-flex items-center justify-center font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember-500/60 disabled:pointer-events-none disabled:opacity-50",
           variants[variant],
           sizes[size],
+          shimmer && !props.disabled && "shimmer",
           className,
         )}
         {...props}

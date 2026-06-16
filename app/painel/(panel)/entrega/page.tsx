@@ -31,6 +31,15 @@ function Label({ children }: { children: React.ReactNode }) {
   return <span className="mb-1 block text-xs font-medium text-ash">{children}</span>;
 }
 
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-coal-800 bg-coal-900/40 p-2.5">
+      <dt className="text-xs text-ash-dark">{label}</dt>
+      <dd className="mt-0.5 font-semibold text-cream">{value}</dd>
+    </div>
+  );
+}
+
 export default async function EntregaPage() {
   const session = await requireSession();
   const storeId = session.storeId;
@@ -38,7 +47,20 @@ export default async function EntregaPage() {
   const [store, zones, drivers] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
-      select: { deliveryMode: true, prepTime: true, freeShippingAbove: true },
+      select: {
+        deliveryMode: true,
+        prepTime: true,
+        freeShippingAbove: true,
+        baseDeliveryFee: true,
+        feePerKm: true,
+        freeRadiusKm: true,
+        maxDeliveryKm: true,
+        freeNeighborhoods: true,
+        lat: true,
+        lng: true,
+        city: true,
+        street: true,
+      },
     }),
     prisma.deliveryZone.findMany({
       where: { storeId },
@@ -53,6 +75,13 @@ export default async function EntregaPage() {
   const deliveryMode = store?.deliveryMode ?? "KM";
   const prepTime = store?.prepTime ?? 40;
   const freeShippingAbove = store?.freeShippingAbove ?? null;
+  const baseDeliveryFee = store?.baseDeliveryFee ?? 0;
+  const feePerKm = store?.feePerKm ?? 0;
+  const freeRadiusKm = store?.freeRadiusKm ?? null;
+  const maxDeliveryKm = store?.maxDeliveryKm ?? null;
+  const freeNeighborhoods = store?.freeNeighborhoods ?? [];
+  const hasLocation = store?.lat != null && store?.lng != null;
+  const hasAddress = !!store?.city;
 
   const isKm = deliveryMode === "KM";
   const isNeighborhood = deliveryMode === "NEIGHBORHOOD";
@@ -117,6 +146,78 @@ export default async function EntregaPage() {
               </span>
             </label>
 
+            {isKm && (
+              <div className="space-y-3 rounded-xl border border-coal-800 bg-coal-900/40 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ash-dark">
+                  Cobrança por distância
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <Label>Taxa base (R$)</Label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="baseDeliveryFee"
+                      defaultValue={baseDeliveryFee ? formatAmount(baseDeliveryFee) : ""}
+                      placeholder="0,00"
+                      className={INPUT}
+                    />
+                  </label>
+                  <label className="block">
+                    <Label>Por km (R$)</Label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="feePerKm"
+                      defaultValue={feePerKm ? formatAmount(feePerKm) : ""}
+                      placeholder="2,00"
+                      className={INPUT}
+                    />
+                  </label>
+                  <label className="block">
+                    <Label>Raio grátis (km)</Label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="freeRadiusKm"
+                      defaultValue={freeRadiusKm ?? ""}
+                      placeholder="Ex: 2"
+                      className={INPUT}
+                    />
+                  </label>
+                  <label className="block">
+                    <Label>Distância máx. (km)</Label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="maxDeliveryKm"
+                      defaultValue={maxDeliveryKm ?? ""}
+                      placeholder="Ex: 10"
+                      className={INPUT}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-ash-dark">
+                  Taxa = base + (R$/km × distância). Grátis dentro do raio; não entrega além da
+                  distância máxima.
+                </p>
+              </div>
+            )}
+
+            <label className="block">
+              <Label>Bairros isentos (frete grátis)</Label>
+              <textarea
+                name="freeNeighborhoods"
+                rows={2}
+                defaultValue={freeNeighborhoods.join(", ")}
+                placeholder="Centro, São Miguel"
+                className={INPUT}
+              />
+              <span className="mt-1 block text-xs text-ash-dark">
+                Separe por vírgula. Esses bairros têm entrega grátis.
+              </span>
+            </label>
+
             <Button type="submit" className="w-full">
               Salvar configurações
             </Button>
@@ -127,11 +228,67 @@ export default async function EntregaPage() {
         <Card className="lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <MapPin size={18} className="text-ember-400" />
-            <h2 className="font-semibold text-cream">{zonesTitle}</h2>
+            <h2 className="font-semibold text-cream">{isKm ? "Resumo da entrega" : zonesTitle}</h2>
             <Badge tone="neutral">{MODE_LABEL[deliveryMode]}</Badge>
           </div>
 
-          {zones.length === 0 ? (
+          {isKm ? (
+            <div className="space-y-4">
+              <div
+                className={`rounded-xl border p-3 text-sm ${
+                  hasLocation
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-warning/30 bg-warning/10 text-warning"
+                }`}
+              >
+                {hasLocation
+                  ? "📍 Localização da loja detectada — as distâncias são calculadas a partir dela."
+                  : hasAddress
+                    ? "Clique em “Salvar configurações” para localizar a loja pelo endereço cadastrado."
+                    : "Defina o endereço da loja em “Minha loja” para calcular as distâncias por km."}
+              </div>
+
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <SummaryItem label="Taxa base" value={formatPrice(baseDeliveryFee)} />
+                <SummaryItem label="Por km" value={formatPrice(feePerKm)} />
+                <SummaryItem
+                  label="Raio grátis"
+                  value={freeRadiusKm != null ? `${freeRadiusKm} km` : "—"}
+                />
+                <SummaryItem
+                  label="Distância máx."
+                  value={maxDeliveryKm != null ? `${maxDeliveryKm} km` : "Sem limite"}
+                />
+                <SummaryItem
+                  label="Grátis acima de"
+                  value={freeShippingAbove != null ? formatPrice(freeShippingAbove) : "—"}
+                />
+                <SummaryItem
+                  label="Bairros isentos"
+                  value={freeNeighborhoods.length ? String(freeNeighborhoods.length) : "—"}
+                />
+              </dl>
+
+              {freeNeighborhoods.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {freeNeighborhoods.map((b) => (
+                    <Badge key={b} tone="success">
+                      {b}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <p className="rounded-xl border border-coal-800 bg-coal-900/40 p-3 text-xs text-ash-dark">
+                Exemplo: um cliente a 3 km pagaria{" "}
+                <span className="font-semibold text-ember-400">
+                  {formatPrice(baseDeliveryFee + feePerKm * 3)}
+                </span>{" "}
+                (base + 3 × por km) — salvo se estiver no raio grátis, em bairro isento ou acima do
+                valor de frete grátis.
+              </p>
+            </div>
+          ) : zones.length === 0 ? (
             <EmptyState
               icon={<MapPin size={28} />}
               title={
@@ -197,7 +354,8 @@ export default async function EntregaPage() {
             </div>
           )}
 
-          {fixedZoneExists ? (
+          {!isKm &&
+            (fixedZoneExists ? (
             <p className="mt-4 rounded-xl border border-coal-800 bg-coal-900/40 p-4 text-xs text-ash-dark">
               No modo de taxa fixa existe apenas uma taxa. Para alterar, exclua a taxa
               atual e cadastre uma nova.
@@ -269,7 +427,7 @@ export default async function EntregaPage() {
                 </Button>
               </div>
             </form>
-          )}
+          ))}
         </Card>
       </div>
 

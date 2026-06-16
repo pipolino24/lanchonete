@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { quoteDelivery } from "@/lib/delivery";
 import type { OrderType, PaymentMethod, OrderChannel } from "@prisma/client";
 
 export type OrderItemInput = {
@@ -106,20 +107,10 @@ export async function createOrder(input: CreateOrderInput) {
     };
   });
 
-  // Frete
-  let deliveryFee = 0;
-  if (input.type === "DELIVERY") {
-    const zone = await prisma.deliveryZone.findFirst({
-      where: { storeId: store.id, active: true },
-      orderBy: { fee: "asc" },
-    });
-    deliveryFee = zone?.fee ?? 0;
-    if (store.freeShippingAbove != null && subtotal >= store.freeShippingAbove) deliveryFee = 0;
-  }
-
-  // Cupom
+  // Cupom (resolvido antes do frete, pois pode zerar a entrega)
   let discount = input.discount ?? 0;
   let couponId: string | null = null;
+  let couponFreeShipping = false;
   if (input.couponCode) {
     const coupon = await prisma.coupon.findFirst({
       where: { storeId: store.id, code: input.couponCode.toUpperCase(), active: true },
@@ -128,9 +119,17 @@ export async function createOrder(input: CreateOrderInput) {
       couponId = coupon.id;
       if (coupon.discountType === "PERCENT") discount += Math.round((subtotal * coupon.discountValue) / 100);
       else discount += coupon.discountValue;
-      if (coupon.freeShipping) deliveryFee = 0;
+      if (coupon.freeShipping) couponFreeShipping = true;
       await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
     }
+  }
+
+  // Frete — calculado de verdade pela config da loja + endereço (fonte da verdade)
+  let deliveryFee = 0;
+  if (input.type === "DELIVERY") {
+    const quote = await quoteDelivery(store, input.address, subtotal, { couponFreeShipping });
+    if (!quote.served) throw new Error(quote.reason ?? "Endereço fora da área de entrega.");
+    deliveryFee = quote.fee;
   }
 
   // Taxa de pagamento (cartão presencial, etc.)

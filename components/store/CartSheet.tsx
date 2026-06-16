@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   X, ChevronLeft, Trash2, Plus, Minus, Bike, ShoppingBag,
   Banknote, QrCode, CreditCard, Check, Loader2, PartyPopper, Flame, Copy,
@@ -11,6 +11,7 @@ import NumberFlow from "@number-flow/react";
 import { Button } from "@/components/ui/Button";
 import { PriceFlow } from "@/components/ui/PriceFlow";
 import { formatPrice } from "@/lib/money";
+import type { DeliveryQuote } from "@/lib/delivery";
 import {
   useCart, cartSubtotal, lineTotal, type OrderType, type CartLine,
 } from "@/lib/cart-store";
@@ -31,8 +32,6 @@ const PAYMENT_LABELS: Record<PaymentMethod, { label: string; icon: React.ReactNo
 export function CartSheet({
   slug,
   minOrder,
-  freeShippingAbove,
-  deliveryFeePreview,
   payments,
   pixKey,
   pixKeyType,
@@ -61,15 +60,50 @@ export function CartSheet({
   const [submitting, setSubmitting] = useState(false);
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [quote, setQuote] = useState<DeliveryQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
 
   const subtotal = cartSubtotal(items);
-  const deliveryFee =
-    orderType !== "DELIVERY"
-      ? 0
-      : freeShippingAbove != null && subtotal >= freeShippingAbove
-        ? 0
-        : deliveryFeePreview;
+  const deliveryFee = orderType === "DELIVERY" ? (quote?.fee ?? 0) : 0;
   const total = subtotal + deliveryFee;
+  const blockedByArea = orderType === "DELIVERY" && quote != null && !quote.served;
+
+  // Calcula o frete de verdade (loja + endereço) ao chegar na revisão
+  const fetchQuote = useCallback(async () => {
+    if (orderType !== "DELIVERY") {
+      setQuote({ served: true, free: true, fee: 0, distanceKm: null, etaMinutes: 0, estimated: false, reason: null });
+      return;
+    }
+    setQuoteLoading(true);
+    try {
+      const res = await fetch(`/api/stores/${slug}/delivery-quote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subtotal,
+          address: {
+            zipCode: address.zipCode,
+            street: address.street,
+            number: address.number,
+            neighborhood: address.neighborhood,
+            city: address.city,
+            state: address.state,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setQuote(await res.json());
+    } catch {
+      // fallback silencioso: não bloqueia o pedido, taxa estimada 0
+      setQuote({ served: true, free: false, fee: 0, distanceKm: null, etaMinutes: 0, estimated: true, reason: null });
+    } finally {
+      setQuoteLoading(false);
+    }
+  }, [orderType, slug, subtotal, address.zipCode, address.street, address.number, address.neighborhood, address.city, address.state]);
+
+  useEffect(() => {
+    if (step === "review") fetchQuote();
+  }, [step, fetchQuote]);
 
   const availablePayments = useMemo(
     () =>
@@ -128,13 +162,13 @@ export function CartSheet({
           changeFor: payment === "CASH" && changeFor ? Math.round(parseFloat(changeFor.replace(",", ".")) * 100) : null,
         }),
       });
-      if (!res.ok) throw new Error("Falha ao enviar pedido");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Falha ao enviar pedido");
       setOrderCode(data.code);
       clear();
       setStep("success");
     } catch (e) {
-      setError("Não foi possível enviar o pedido. Tente novamente.");
+      setError(e instanceof Error ? e.message : "Não foi possível enviar o pedido. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -301,7 +335,23 @@ export function CartSheet({
                 <Row label="Pagamento" value={payment ? PAYMENT_LABELS[payment].label : "—"} />
               </div>
               <div className="rounded-xl border border-coal-800 bg-coal-850 p-3">
-                <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+                {orderType === "DELIVERY" && quoteLoading ? (
+                  <p className="flex items-center gap-2 text-sm text-ash">
+                    <Loader2 size={15} className="animate-spin" /> Calculando entrega…
+                  </p>
+                ) : blockedByArea ? (
+                  <p className="text-sm font-medium text-danger">{quote?.reason}</p>
+                ) : (
+                  <>
+                    <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+                    {orderType === "DELIVERY" && quote?.distanceKm != null && (
+                      <p className="mt-2 text-xs text-ash-dark">≈ {quote.distanceKm} km da loja</p>
+                    )}
+                    {orderType === "DELIVERY" && quote?.estimated && !quote.free && (
+                      <p className="mt-1 text-xs text-warning">Taxa estimada — confirmada no preparo.</p>
+                    )}
+                  </>
+                )}
               </div>
               {error && <p className="text-sm text-danger">{error}</p>}
             </div>
@@ -397,9 +447,18 @@ export function CartSheet({
               </Button>
             )}
             {step === "review" && (
-              <Button className="w-full justify-between" shimmer disabled={submitting} onClick={submit}>
-                {submitting ? <Loader2 className="animate-spin" size={18} /> : <span>Fazer pedido</span>}
-                <span>{formatPrice(total)}</span>
+              <Button
+                className="w-full justify-between"
+                shimmer
+                disabled={submitting || quoteLoading || blockedByArea}
+                onClick={submit}
+              >
+                {submitting ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <span>{blockedByArea ? "Fora da área de entrega" : "Fazer pedido"}</span>
+                )}
+                {!blockedByArea && <span>{formatPrice(total)}</span>}
               </Button>
             )}
           </div>

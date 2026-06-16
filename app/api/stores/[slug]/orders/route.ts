@@ -53,6 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     return NextResponse.json({ id: order.id, code: order.code, total: order.total }, { status: 201 });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

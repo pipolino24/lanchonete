@@ -40,6 +40,13 @@ model Store {
   deliveryMode      DeliveryMode @default(KM)
   freeShippingAbove Int?
 
+  // Entrega por km (modo KM)
+  baseDeliveryFee   Int      @default(0)   // taxa base em centavos
+  feePerKm          Int      @default(0)   // centavos por km
+  freeRadiusKm      Float?                 // grátis dentro deste raio (km)
+  maxDeliveryKm     Float?                 // não entrega além disso (km)
+  freeNeighborhoods String[] @default([])  // bairros isentos (entrega grátis)
+
   pixKey     String?
   pixKeyType String?
 

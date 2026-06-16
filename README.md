@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔥 Cariri Burguer
 
-## Getting Started
+Gerenciador de pedidos **online e presencial** para hamburgueria — cardápio digital para o cliente + painel de operação para a loja. Inspirado no fluxo do cardapio.ai, com **layout próprio** (tema escuro "smokehouse"), **desktop de verdade no PC** e **versão mobile no celular**.
 
-First, run the development server:
+## ✨ Funcionalidades
+
+### Cliente (cardápio online)
+- Vitrine responsiva (grid largo no desktop, coluna única no mobile)
+- Categorias, destaques e busca
+- Modal de produto com **adicionais/complementos**, **remoção de ingredientes**, observação e quantidade
+- Carrinho + checkout completo: Delivery / Retirada, identificação, endereço, cupom e pagamento (Dinheiro com troco, Pix, Crédito, Débito)
+
+### Painel da loja
+- Login com sessão (JWT em cookie httpOnly)
+- **Início** (dashboard com métricas)
+- **Pedidos** — Kanban (Novos → Em preparo → Saiu p/ entrega → Concluídos), abas por tipo, avançar status, detalhe
+- **PDV / Nova venda** e **Mesas** (atendimento no salão)
+- **Produtos** (categorias, tipos Comum/Combo/Pizza/Peso, destaque, canais, adicionais) e **Adicionais** (grupos reutilizáveis)
+- **Clientes**, **Cupons**, **Entrega** (faixas/frete/entregadores), **Pagamento**, **Horários**, **Caixa**, **Relatórios**, **QR Code**, **Minha loja**
+
+> Fora de escopo: emissão fiscal (NFC-e) e integrações de terceiros.
+
+## 🧱 Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS v4** (tema escuro quente customizado)
+- **Prisma 6** + **PostgreSQL**
+- Auth com **jose** (JWT) + **bcryptjs**; estado do carrinho com **zustand**
+
+## 🚀 Como rodar
+
+Pré-requisitos: Node 20+ e Docker.
 
 ```bash
+# 1) Banco de dados (Postgres via Docker, porta 5544)
+docker compose up -d
+
+# 2) Dependências
+npm install
+
+# 3) Migração + dados de exemplo
+npx prisma migrate dev
+npm run db:seed
+npx tsx prisma/seed-orders.ts   # pedidos de demonstração (opcional)
+
+# 4) App
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crie um `.env` baseado em `.env.example`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL="postgresql://cariri:cariri@localhost:5544/cariri?schema=public"
+AUTH_SECRET="uma_string_aleatoria_longa"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔑 Acesso (demo)
 
-## Learn More
+- Cardápio: `http://localhost:3000/cardapio/cariri-burguer`
+- Painel: `http://localhost:3000/painel` — **admin@cariri.com** / **cariri123**
 
-To learn more about Next.js, take a look at the following resources:
+## 📁 Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  cardapio/[slug]/      # vitrine do cliente
+  painel/               # painel da loja (login + (panel)/*)
+  api/                  # rotas de API (produtos, pedidos)
+components/
+  store/                # componentes do cardápio
+  admin/                # componentes do painel
+  ui/  brand/           # design system + identidade
+lib/                    # prisma, auth, money, orders, queries, cart-store
+prisma/                 # schema + seeds
+docs/                   # análise/spec de funcionalidades
+```

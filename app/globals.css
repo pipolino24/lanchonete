@@ -1,26 +1,148 @@
 @import "tailwindcss";
 
+@theme {
+  /* Fontes */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-oswald), var(--font-inter), sans-serif;
+
+  /* Carvão quente / madeira queimada (não cinza frio) */
+  --color-coal-950: #100b08;
+  --color-coal-900: #16100c;
+  --color-coal-850: #1d1611;
+  --color-coal-800: #241b15;
+  --color-coal-750: #2d221b;
+  --color-coal-700: #3b2d23;
+  --color-coal-600: #513d30;
+  --color-coal-500: #6e5443;
+
+  /* Brasa / laranja-fogo (acento) */
+  --color-ember-300: #ffcb9e;
+  --color-ember-400: #ff9d57;
+  --color-ember-500: #f26a1f;
+  --color-ember-600: #db5413;
+  --color-ember-700: #b5410d;
+
+  /* Vermelho-brasa */
+  --color-flame-500: #e23d1b;
+  --color-flame-600: #bf3013;
+
+  /* Dourado quente (detalhes) */
+  --color-gold: #f5b14b;
+
+  /* Neutros quentes */
+  --color-cream: #f8efe3;
+  --color-ash: #b8a692;
+  --color-ash-dark: #897465;
+
+  /* Estados */
+  --color-success: #54b96f;
+  --color-warning: #e8a13c;
+  --color-danger: #e5544d;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-coal-950);
+  --foreground: var(--color-cream);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-coal-950);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Atmosfera quente: brilho de brasa + leve calor nas bordas */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 600px at 80% -15%, rgba(242, 106, 31, 0.18), transparent 60%),
+    radial-gradient(900px 600px at 0% 0%, rgba(226, 61, 27, 0.12), transparent 55%),
+    radial-gradient(1200px 800px at 50% 120%, rgba(245, 177, 75, 0.06), transparent 60%),
+    linear-gradient(180deg, #16100c 0%, #100b08 100%);
+}
+
+/* Textura sutil de grão (dá calor, tira o "chapado") */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  * {
+    border-color: var(--color-coal-700);
+  }
+}
+
+/* Tipografia de destaque */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.005em;
+}
+
+/* Superfícies quentes com leve relevo (luz vindo de cima) */
+.surface {
+  background:
+    linear-gradient(180deg, rgba(255, 214, 170, 0.06), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #241c15, #1d1610);
+  border: 1px solid #3d2f24;
+}
+.surface:hover {
+  border-color: #4a3829;
+}
+
+/* Sombra quente (brasa) */
+.shadow-warm {
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.55), 0 6px 18px -8px rgba(242, 106, 31, 0.18);
+}
+.glow-ember {
+  box-shadow: 0 10px 30px -8px rgba(242, 106, 31, 0.45);
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-coal-700);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-coal-600); background-clip: padding-box; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.25s ease-out both; }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
+}
+.animate-flicker { animation: flicker 2.4s ease-in-out infinite; }

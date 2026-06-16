@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cariri_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cariri
+      POSTGRES_PASSWORD: cariri
+      POSTGRES_DB: cariri
+    ports:
+      - "5544:5432"
+    volumes:
+      - cariri_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cariri -d cariri"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cariri_pgdata:

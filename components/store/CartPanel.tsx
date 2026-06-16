@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 
 export function CartPanel({
   minOrder,
-  freeShippingAbove,
-  deliveryFeePreview,
   cartMessage,
   onCheckout,
 }: {
@@ -24,13 +22,6 @@ export function CartPanel({
 }) {
   const { items, orderType, setOrderType, updateQty, removeItem } = useCart();
   const subtotal = cartSubtotal(items);
-  const deliveryFee =
-    orderType !== "DELIVERY"
-      ? 0
-      : freeShippingAbove != null && subtotal >= freeShippingAbove
-        ? 0
-        : deliveryFeePreview;
-  const total = subtotal + deliveryFee;
   const belowMin = subtotal < minOrder;
 
   const opts: { type: OrderType; label: string; icon: React.ReactNode }[] = [
@@ -120,23 +111,16 @@ export function CartPanel({
           </div>
 
           <div className="border-t border-coal-800 p-4">
-            <div className="mb-3 space-y-1 text-sm">
-              <div className="flex justify-between text-ash">
+            <div className="mb-3 space-y-1">
+              <div className="flex justify-between text-base font-bold text-cream">
                 <span>Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
+                <PriceFlow cents={subtotal} />
               </div>
               {orderType === "DELIVERY" && (
-                <div className="flex justify-between text-ash">
-                  <span>Entrega</span>
-                  <span className={deliveryFee === 0 ? "font-semibold text-success" : ""}>
-                    {deliveryFee === 0 ? "GRÁTIS" : formatPrice(deliveryFee)}
-                  </span>
-                </div>
+                <p className="flex items-center gap-1.5 text-xs text-ash-dark">
+                  <Bike size={13} /> Entrega calculada na finalização
+                </p>
               )}
-              <div className="flex justify-between border-t border-coal-800 pt-1 text-base font-bold text-cream">
-                <span>Total</span>
-                <PriceFlow cents={total} />
-              </div>
             </div>
             {belowMin && (
               <p className="mb-2 text-center text-xs text-warning">Pedido mínimo de {formatPrice(minOrder)}</p>

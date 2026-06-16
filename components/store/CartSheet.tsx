@@ -300,6 +300,9 @@ export function CartSheet({
                 {orderType === "DELIVERY" && <Row label="Endereço" value={`${address.street}, ${address.number}`} />}
                 <Row label="Pagamento" value={payment ? PAYMENT_LABELS[payment].label : "—"} />
               </div>
+              <div className="rounded-xl border border-coal-800 bg-coal-850 p-3">
+                <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+              </div>
               {error && <p className="text-sm text-danger">{error}</p>}
             </div>
           )}
@@ -362,7 +365,17 @@ export function CartSheet({
           <div className="border-t border-coal-700 bg-coal-900 p-4">
             {step === "cart" && (
               <>
-                <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
+                <div className="mb-3 space-y-1">
+                  <div className="flex justify-between text-base font-bold text-cream">
+                    <span>Subtotal</span>
+                    <PriceFlow cents={subtotal} />
+                  </div>
+                  {orderType === "DELIVERY" && (
+                    <p className="flex items-center gap-1.5 text-xs text-ash-dark">
+                      <Bike size={13} /> Entrega calculada na finalização
+                    </p>
+                  )}
+                </div>
                 {belowMin && (
                   <p className="mb-2 text-center text-xs text-warning">
                     Pedido mínimo de {formatPrice(minOrder)}
@@ -525,7 +538,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function Totals({ subtotal, deliveryFee, orderType, total }: { subtotal: number; deliveryFee: number; orderType: OrderType; total: number }) {
   return (
-    <div className="mb-3 space-y-1 text-sm">
+    <div className="space-y-1 text-sm">
       <div className="flex justify-between text-ash">
         <span>Subtotal</span>
         <span>{formatPrice(subtotal)}</span>

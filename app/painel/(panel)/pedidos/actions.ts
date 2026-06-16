@@ -41,3 +41,26 @@ export async function cancelOrder(orderId: string) {
   });
   revalidatePath("/painel/pedidos");
 }
+
+export async function atribuirEntregador(orderId: string, driverId: string) {
+  const session = await requireSession();
+  await prisma.order.updateMany({
+    where: { id: orderId, storeId: session.storeId },
+    data: { driverId: driverId || null },
+  });
+  revalidatePath("/painel/pedidos");
+}
+
+export async function salvarAnotacaoCliente(orderId: string, texto: string) {
+  const session = await requireSession();
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, storeId: session.storeId },
+    select: { customerId: true },
+  });
+  if (!order?.customerId) return;
+  await prisma.customer.updateMany({
+    where: { id: order.customerId, storeId: session.storeId },
+    data: { notes: texto },
+  });
+  revalidatePath("/painel/pedidos");
+}

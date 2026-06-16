@@ -1,12 +1,12 @@
 // Cariri Burguer — Gerenciador de pedidos (online + presencial)
-// Todos os valores monetários são armazenados em CENTAVOS (Int).
+// Banco: MongoDB Atlas. Todos os valores monetários são em CENTAVOS (Int).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -15,21 +15,19 @@ datasource db {
 // ─────────────────────────────────────────────────────────────
 
 model Store {
-  id           String   @id @default(cuid())
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
   name         String
-  slug         String   @unique
-  document     String? // CNPJ ou CPF
+  slug         String  @unique
+  document     String?
   whatsapp     String?
-  minOrder     Int      @default(0) // centavos
-  prepTime     Int      @default(40) // minutos
-  active       Boolean  @default(true)
+  minOrder     Int     @default(0)
+  prepTime     Int     @default(40)
+  active       Boolean @default(true)
 
-  // Identidade visual
-  primaryColor String   @default("#F2611F")
+  primaryColor String  @default("#F2611F")
   logoUrl      String?
   coverUrl     String?
 
-  // Endereço da loja
   street       String?
   number       String?
   neighborhood String?
@@ -39,39 +37,37 @@ model Store {
   lat          Float?
   lng          Float?
 
-  // Entrega
   deliveryMode      DeliveryMode @default(KM)
-  freeShippingAbove Int? // centavos; null = desativado
+  freeShippingAbove Int?
 
-  // Pagamento
   pixKey     String?
-  pixKeyType String? // CPF | CNPJ | EMAIL | PHONE | RANDOM
+  pixKeyType String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hours          BusinessHour[]
-  categories     Category[]
-  products       Product[]
+  hours            BusinessHour[]
+  categories       Category[]
+  products         Product[]
   complementGroups ComplementGroup[]
-  customers      Customer[]
-  coupons        Coupon[]
-  deliveryZones  DeliveryZone[]
-  paymentConfigs PaymentConfig[]
-  tables         RestaurantTable[]
-  orders         Order[]
-  drivers        Driver[]
-  users          User[]
-  cashRegisters  CashRegister[]
+  customers        Customer[]
+  coupons          Coupon[]
+  deliveryZones    DeliveryZone[]
+  paymentConfigs   PaymentConfig[]
+  tables           RestaurantTable[]
+  orders           Order[]
+  drivers          Driver[]
+  users            User[]
+  cashRegisters    CashRegister[]
 }
 
 model BusinessHour {
-  id        String  @id @default(cuid())
-  storeId   String
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  storeId   String  @db.ObjectId
   store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  weekday   Int // 0 = domingo ... 6 = sábado
-  openTime  String // "18:00"
-  closeTime String // "23:30"
+  weekday   Int
+  openTime  String
+  closeTime String
   active    Boolean @default(true)
 
   @@index([storeId])
@@ -82,8 +78,8 @@ model BusinessHour {
 // ─────────────────────────────────────────────────────────────
 
 model Category {
-  id       String  @id @default(cuid())
-  storeId  String
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  storeId  String  @db.ObjectId
   store    Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name     String
   emoji    String?
@@ -103,33 +99,33 @@ enum ProductType {
 }
 
 model Product {
-  id          String      @id @default(cuid())
-  storeId     String
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  storeId     String      @db.ObjectId
   store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId  String
+  categoryId  String      @db.ObjectId
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   type        ProductType @default(COMMON)
 
   name        String
   description String?
-  price       Int // centavos
-  promoPrice  Int? // centavos; preço com desconto
+  price       Int
+  promoPrice  Int?
   images      String[]    @default([])
 
-  measureValue String? // ex: "730"
-  measureUnit  String? // ex: "g", "ml", "un"
-  serves       Int? // serve quantas pessoas
+  measureValue String?
+  measureUnit  String?
+  serves       Int?
   stock        Int?
   pdvCode      String?
 
-  active           Boolean @default(true)
-  featured         Boolean @default(false)
-  availableDelivery Boolean @default(true) // entrega e retirada
-  availableDineIn   Boolean @default(true) // mesa e balcão
-  position         Int     @default(0)
+  active            Boolean @default(true)
+  featured          Boolean @default(false)
+  availableDelivery Boolean @default(true)
+  availableDineIn   Boolean @default(true)
+  position          Int     @default(0)
 
-  tags                String[] @default([]) // etiquetas
-  removableIngredients String[] @default([]) // remoção de ingredientes
+  tags                 String[] @default([])
+  removableIngredients String[] @default([])
 
   complementLinks ProductComplementGroup[]
   orderItems      OrderItem[]
@@ -139,12 +135,12 @@ model Product {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ADICIONAIS / COMPLEMENTOS (grupos reutilizáveis)
+// ADICIONAIS / COMPLEMENTOS
 // ─────────────────────────────────────────────────────────────
 
 model ComplementGroup {
-  id          String  @id @default(cuid())
-  storeId     String
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  storeId     String  @db.ObjectId
   store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   title       String
   description String?
@@ -158,33 +154,32 @@ model ComplementGroup {
 }
 
 model ComplementItem {
-  id          String   @id @default(cuid())
-  groupId     String
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  groupId     String          @db.ObjectId
   group       ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  price       Int      @default(0) // centavos
+  price       Int     @default(0)
   imageUrl    String?
   pdvCode     String?
   stock       Int?
-  active      Boolean  @default(true)
-  position    Int      @default(0)
+  active      Boolean @default(true)
+  position    Int     @default(0)
 
   orderItemComplements OrderItemComplement[]
 
   @@index([groupId])
 }
 
-// Vínculo grupo<->produto com as regras (obrigatoriedade, min, max)
 model ProductComplementGroup {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  groupId   String
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  productId String          @db.ObjectId
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  groupId   String          @db.ObjectId
   group     ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   required  Boolean @default(false)
   min       Int     @default(0)
-  max       Int     @default(0) // 0 = sem limite
+  max       Int     @default(0)
   position  Int     @default(0)
 
   @@unique([productId, groupId])
@@ -196,12 +191,12 @@ model ProductComplementGroup {
 // ─────────────────────────────────────────────────────────────
 
 model Customer {
-  id        String   @id @default(cuid())
-  storeId   String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  storeId   String   @db.ObjectId
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name      String
   phone     String
-  notes     String? // anotações internas
+  notes     String?
   createdAt DateTime @default(now())
 
   addresses Address[]
@@ -212,8 +207,8 @@ model Customer {
 }
 
 model Address {
-  id           String   @id @default(cuid())
-  customerId   String
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  customerId   String   @db.ObjectId
   customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   street       String
   number       String?
@@ -241,20 +236,20 @@ enum DiscountType {
 }
 
 model Coupon {
-  id              String       @id @default(cuid())
-  storeId         String
-  store           Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  code            String
-  discountType    DiscountType @default(PERCENT)
-  discountValue   Int // PERCENT: 0-100 | FIXED: centavos
-  minOrder        Int? // centavos
-  freeShipping    Boolean      @default(false)
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  storeId          String       @db.ObjectId
+  store            Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  code             String
+  discountType     DiscountType @default(PERCENT)
+  discountValue    Int
+  minOrder         Int?
+  freeShipping     Boolean      @default(false)
   perCustomerLimit Int?
-  totalLimit      Int?
-  usedCount       Int          @default(0)
-  startsAt        DateTime?
-  endsAt          DateTime?
-  active          Boolean      @default(true)
+  totalLimit       Int?
+  usedCount        Int          @default(0)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean      @default(true)
 
   orders Order[]
 
@@ -269,12 +264,12 @@ enum DeliveryMode {
 }
 
 model DeliveryZone {
-  id         String  @id @default(cuid())
-  storeId    String
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  storeId    String  @db.ObjectId
   store      Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  label      String? // nome do bairro (modo NEIGHBORHOOD)
-  maxKm      Float? // raio até X km (modo KM)
-  fee        Int     @default(0) // centavos
+  label      String?
+  maxKm      Float?
+  fee        Int     @default(0)
   etaMinutes Int     @default(30)
   active     Boolean @default(true)
   position   Int     @default(0)
@@ -292,13 +287,13 @@ enum PaymentMethod {
 }
 
 model PaymentConfig {
-  id             String        @id @default(cuid())
-  storeId        String
-  store          Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  method         PaymentMethod
-  enabledDelivery Boolean      @default(true)
-  enabledPickup  Boolean       @default(true)
-  extraFeePercent Float        @default(0)
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String        @db.ObjectId
+  store           Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  method          PaymentMethod
+  enabledDelivery Boolean       @default(true)
+  enabledPickup   Boolean       @default(true)
+  extraFeePercent Float         @default(0)
 
   @@unique([storeId, method])
   @@index([storeId])
@@ -314,8 +309,8 @@ enum TableStatus {
 }
 
 model RestaurantTable {
-  id      String      @id @default(cuid())
-  storeId String
+  id      String      @id @default(auto()) @map("_id") @db.ObjectId
+  storeId String      @db.ObjectId
   store   Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   number  Int
   status  TableStatus @default(FREE)
@@ -327,8 +322,8 @@ model RestaurantTable {
 }
 
 model Driver {
-  id      String  @id @default(cuid())
-  storeId String
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  storeId String  @db.ObjectId
   store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name    String
   phone   String?
@@ -363,36 +358,31 @@ enum OrderChannel {
 }
 
 model Order {
-  id      String       @id @default(cuid())
-  storeId String
+  id      String       @id @default(auto()) @map("_id") @db.ObjectId
+  storeId String       @db.ObjectId
   store   Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  code    String // ex: "001-291962"
+  code    String
   type    OrderType    @default(DELIVERY)
   status  OrderStatus  @default(NEW)
   channel OrderChannel @default(ONLINE)
 
-  // Cliente (snapshot + relação opcional)
-  customerId   String?
-  customer     Customer? @relation(fields: [customerId], references: [id])
-  customerName String?
+  customerId    String?   @db.ObjectId
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  customerName  String?
   customerPhone String?
 
-  // Endereço (entrega)
-  addressId       String?
+  addressId       String?  @db.ObjectId
   address         Address? @relation(fields: [addressId], references: [id])
   addressSnapshot String?
 
-  // Mesa / balcão
-  tableId   String?
+  tableId   String?          @db.ObjectId
   table     RestaurantTable? @relation(fields: [tableId], references: [id])
   comanda   String?
   attendant String?
 
-  // Pagamento
   paymentMethod PaymentMethod?
-  changeFor     Int? // troco para (centavos)
+  changeFor     Int?
 
-  // Valores (centavos)
   subtotal    Int @default(0)
   deliveryFee Int @default(0)
   paymentFee  Int @default(0)
@@ -401,13 +391,13 @@ model Order {
   tip         Int @default(0)
   total       Int @default(0)
 
-  couponId String?
+  couponId String? @db.ObjectId
   coupon   Coupon? @relation(fields: [couponId], references: [id])
 
-  driverId String?
+  driverId String? @db.ObjectId
   driver   Driver? @relation(fields: [driverId], references: [id])
 
-  note        String?
+  note         String?
   scheduledFor DateTime?
 
   createdAt DateTime @default(now())
@@ -421,17 +411,17 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id])
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId    String   @db.ObjectId
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?  @db.ObjectId
+  product    Product? @relation(fields: [productId], references: [id])
 
-  name      String // snapshot
-  unitPrice Int // centavos (produto base)
-  quantity  Int    @default(1)
-  totalPrice Int // centavos (com adicionais * qtd)
-  note      String? // observação
+  name       String
+  unitPrice  Int
+  quantity   Int     @default(1)
+  totalPrice Int
+  note       String?
 
   complements OrderItemComplement[]
 
@@ -439,14 +429,14 @@ model OrderItem {
 }
 
 model OrderItemComplement {
-  id          String  @id @default(cuid())
-  orderItemId String
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  complementItemId String?
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  orderItemId      String          @db.ObjectId
+  orderItem        OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  complementItemId String?         @db.ObjectId
   complementItem   ComplementItem? @relation(fields: [complementItemId], references: [id])
-  name        String // snapshot
-  price       Int    @default(0) // centavos
-  quantity    Int    @default(1)
+  name             String
+  price            Int     @default(0)
+  quantity         Int     @default(1)
 
   @@index([orderItemId])
 }
@@ -461,12 +451,12 @@ enum CashStatus {
 }
 
 model CashRegister {
-  id             String     @id @default(cuid())
-  storeId        String
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  storeId        String     @db.ObjectId
   store          Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   status         CashStatus @default(OPEN)
-  openingBalance Int        @default(0) // centavos
-  countedBalance Int? // valor informado no fechamento
+  openingBalance Int        @default(0)
+  countedBalance Int?
   note           String?
   openedAt       DateTime   @default(now())
   closedAt       DateTime?
@@ -484,11 +474,11 @@ enum CashMovementType {
 }
 
 model CashMovement {
-  id          String   @id @default(cuid())
-  registerId  String
-  register    CashRegister @relation(fields: [registerId], references: [id], onDelete: Cascade)
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  registerId  String           @db.ObjectId
+  register    CashRegister     @relation(fields: [registerId], references: [id], onDelete: Cascade)
   type        CashMovementType
-  amount      Int // centavos
+  amount      Int
   description String?
   createdAt   DateTime @default(now())
 
@@ -496,7 +486,7 @@ model CashMovement {
 }
 
 // ─────────────────────────────────────────────────────────────
-// USUÁRIOS / ACESSOS
+// USUÁRIOS
 // ─────────────────────────────────────────────────────────────
 
 enum UserRole {
@@ -506,8 +496,8 @@ enum UserRole {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  storeId      String
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  storeId      String   @db.ObjectId
   store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name         String
   email        String   @unique

@@ -9,12 +9,14 @@ import {
   UtensilsCrossed,
   CreditCard,
   Trophy,
+  User,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { PageHeader, Card, StatCard, EmptyState } from "@/components/admin/ui";
+import { PrintButton } from "@/components/admin/relatorios/PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -84,12 +86,20 @@ export default async function RelatoriosPage({
     },
     select: {
       type: true,
+      status: true,
       paymentMethod: true,
       total: true,
       deliveryFee: true,
+      driverId: true,
       items: { select: { name: true, quantity: true } },
     },
   });
+
+  const drivers = await prisma.driver.findMany({
+    where: { storeId },
+    select: { id: true, name: true },
+  });
+  const driverNameById = new Map(drivers.map((d) => [d.id, d.name]));
 
   // Totais
   const faturamento = orders.reduce((s, o) => s + o.total, 0);
@@ -152,14 +162,56 @@ export default async function RelatoriosPage({
     .slice(0, 10);
   const maxItemQtd = topItens.length ? topItens[0].quantity : 0;
 
+  // Entregadores: pedidos COMPLETED/DELIVERING agrupados por driverId
+  const SEM_ENTREGADOR = "__sem__";
+  const entregadorAgg = new Map<string, { qtd: number; receita: number }>();
+  for (const o of orders) {
+    if (o.status !== "COMPLETED" && o.status !== "DELIVERING") continue;
+    const key = o.driverId ?? SEM_ENTREGADOR;
+    const bucket = entregadorAgg.get(key) ?? { qtd: 0, receita: 0 };
+    bucket.qtd += 1;
+    bucket.receita += o.total;
+    entregadorAgg.set(key, bucket);
+  }
+  const entregadores = Array.from(entregadorAgg.entries())
+    .map(([key, v]) => ({
+      key,
+      label:
+        key === SEM_ENTREGADOR
+          ? "Sem entregador"
+          : driverNameById.get(key) ?? "Entregador removido",
+      qtd: v.qtd,
+      receita: v.receita,
+    }))
+    .sort((a, b) => b.qtd - a.qtd);
+
   const hasData = totalPedidos > 0;
 
   return (
     <>
-      <PageHeader title="Relatórios" subtitle={PERIODO_SUBTITLE[periodo]} />
+      {/* Estilos de impressão — esconde a sidebar e ajusta o padding ao imprimir */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              aside { display: none !important; }
+              .no-print { display: none !important; }
+              main { padding: 0 !important; margin: 0 !important; }
+              body { background: #ffffff !important; }
+              @page { margin: 16mm; }
+            }
+          `,
+        }}
+      />
+
+      <PageHeader
+        title="Relatórios"
+        subtitle={PERIODO_SUBTITLE[periodo]}
+        actions={<PrintButton />}
+      />
 
       {/* Tabs de período */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="no-print mb-4 flex items-center gap-2">
         {PERIODOS.map((p) => (
           <Link
             key={p.key}
@@ -302,6 +354,44 @@ export default async function RelatoriosPage({
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* Entregadores */}
+          <Card className="lg:col-span-2">
+            <h2 className="mb-3 font-semibold text-cream">Entregadores</h2>
+            {entregadores.length === 0 ? (
+              <p className="py-8 text-center text-sm text-ash">
+                Nenhuma entrega concluída ou em rota no período.
+              </p>
+            ) : (
+              <div className="divide-y divide-coal-800">
+                {entregadores.map((e) => (
+                  <div key={e.key} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "grid h-9 w-9 place-items-center rounded-xl",
+                          e.key === "__sem__"
+                            ? "bg-coal-800 text-ash"
+                            : "bg-ember-500/15 text-ember-400",
+                        )}
+                      >
+                        {e.key === "__sem__" ? <User size={16} /> : <Bike size={16} />}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-cream">{e.label}</p>
+                        <p className="text-xs text-ash">
+                          {e.qtd} {e.qtd === 1 ? "entrega" : "entregas"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="font-semibold text-ember-400">
+                      {formatPrice(e.receita)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}

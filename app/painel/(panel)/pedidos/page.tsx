@@ -7,14 +7,22 @@ export const dynamic = "force-dynamic";
 export default async function PedidosPage() {
   const session = await requireSession();
 
-  const orders = await prisma.order.findMany({
-    where: { storeId: session.storeId },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: {
-      items: { include: { complements: true } },
-    },
-  });
+  const [orders, drivers] = await Promise.all([
+    prisma.order.findMany({
+      where: { storeId: session.storeId },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        items: { include: { complements: true } },
+        customer: { select: { notes: true } },
+      },
+    }),
+    prisma.driver.findMany({
+      where: { storeId: session.storeId, active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   const data: KanbanOrder[] = orders.map((o) => ({
     id: o.id,
@@ -33,6 +41,9 @@ export default async function PedidosPage() {
     discount: o.discount,
     total: o.total,
     createdAt: o.createdAt.toISOString(),
+    driverId: o.driverId,
+    customerId: o.customerId,
+    customerNotes: o.customer?.notes ?? null,
     items: o.items.map((it) => ({
       id: it.id,
       name: it.name,
@@ -43,5 +54,5 @@ export default async function PedidosPage() {
     })),
   }));
 
-  return <KanbanBoard orders={data} />;
+  return <KanbanBoard orders={data} drivers={drivers} />;
 }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,14 +8,20 @@ type LogoProps = {
   className?: string;
 };
 
-const sizes = {
-  sm: { box: "h-8 w-8", icon: 16, title: "text-base", sub: "text-[9px]" },
-  md: { box: "h-11 w-11", icon: 22, title: "text-xl", sub: "text-[10px]" },
-  lg: { box: "h-16 w-16", icon: 32, title: "text-3xl", sub: "text-xs" },
+const emblemSizes = {
+  sm: { box: "h-8 w-8", icon: 16 },
+  md: { box: "h-11 w-11", icon: 22 },
+  lg: { box: "h-16 w-16", icon: 32 },
 };
 
+// Logo oficial (lockup completo: pão + chama + "CARIRI BURGUER")
+// Variante para fundo escuro (carvão recolorido p/ creme); a original fica em /cariri-burguer-logo.png.
+const LOGO = { src: "/cariri-burguer-logo-dark.png", w: 558, h: 447 };
+const logoHeights = { sm: 32, md: 48, lg: 92 };
+
+/** Emblema desenhado (chama em ladrilho de carvão) — para avatares circulares/compactos. */
 export function Emblem({ size = "md", className }: { size?: LogoProps["size"]; className?: string }) {
-  const s = sizes[size ?? "md"];
+  const s = emblemSizes[size ?? "md"];
   return (
     <span
       className={cn(
@@ -29,26 +36,21 @@ export function Emblem({ size = "md", className }: { size?: LogoProps["size"]; c
   );
 }
 
+/** Logotipo Cariri Burguer. `full`/`stacked` usam a arte oficial; `emblem` usa o emblema desenhado. */
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {
-  const s = sizes[size ?? "md"];
   if (variant === "emblem") return <Emblem size={size} className={className} />;
 
+  const h = logoHeights[size ?? "md"];
+  const w = Math.round(h * (LOGO.w / LOGO.h));
+
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <Emblem size={size} />
-      <span className="flex flex-col leading-none">
-        <span className={cn("font-display font-bold tracking-tight text-ember-500", s.title)}>
-          CARIRI
-        </span>
-        <span
-          className={cn(
-            "font-display font-semibold uppercase tracking-[0.35em] text-cream/90",
-            s.sub,
-          )}
-        >
-          Burguer
-        </span>
-      </span>
-    </span>
+    <Image
+      src={LOGO.src}
+      alt="Cariri Burguer"
+      width={w}
+      height={h}
+      priority
+      className={cn("select-none", className)}
+    />
   );
 }

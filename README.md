@@ -24,33 +24,30 @@ Gerenciador de pedidos **online e presencial** para hamburgueria — cardápio d
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript**
 - **Tailwind CSS v4** (tema escuro quente customizado)
-- **Prisma 6** + **PostgreSQL**
+- **Prisma 6** + **MongoDB** (Atlas)
 - Auth com **jose** (JWT) + **bcryptjs**; estado do carrinho com **zustand**
 
 ## 🚀 Como rodar
 
-Pré-requisitos: Node 20+ e Docker.
+Pré-requisitos: Node 20+ e um banco MongoDB (Atlas grátis ou local).
 
 ```bash
-# 1) Banco de dados (Postgres via Docker, porta 5544)
-docker compose up -d
-
-# 2) Dependências
+# 1) Dependências
 npm install
 
-# 3) Migração + dados de exemplo
-npx prisma migrate dev
+# 2) Crie o .env (veja abaixo) e sincronize o banco
+npx prisma db push
 npm run db:seed
 npx tsx prisma/seed-orders.ts   # pedidos de demonstração (opcional)
 
-# 4) App
+# 3) App
 npm run dev
 ```
 
 Crie um `.env` baseado em `.env.example`:
 
 ```env
-DATABASE_URL="postgresql://cariri:cariri@localhost:5544/cariri?schema=public"
+DATABASE_URL="mongodb+srv://USUARIO:SENHA@cluster0.xxxxx.mongodb.net/cariri?retryWrites=true&w=majority"
 AUTH_SECRET="uma_string_aleatoria_longa"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```

@@ -30,7 +30,11 @@ export default async function EditarProdutoPage({
       ? Promise.resolve(null)
       : prisma.product.findFirst({
           where: { id, storeId: session.storeId },
-          include: { complementLinks: { select: { groupId: true } } },
+          include: {
+            complementLinks: {
+              select: { groupId: true, required: true, min: true, max: true },
+            },
+          },
         }),
   ]);
 
@@ -59,6 +63,12 @@ export default async function EditarProdutoPage({
         active: product.active,
         removableIngredients: product.removableIngredients,
         groupIds: product.complementLinks.map((l) => l.groupId),
+        groupRules: Object.fromEntries(
+          product.complementLinks.map((l) => [
+            l.groupId,
+            { required: l.required, min: l.min, max: l.max },
+          ]),
+        ),
       }
     : null;
 

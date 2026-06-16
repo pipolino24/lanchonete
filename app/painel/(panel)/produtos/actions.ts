@@ -30,6 +30,11 @@ function optInt(value: FormDataEntryValue | null): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+function nonNegInt(value: FormDataEntryValue | null): number {
+  const n = parseInt(String(value ?? "").trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 function csvList(value: FormDataEntryValue | null): string[] {
   return str(value)
     .split(",")
@@ -150,18 +155,24 @@ export async function salvarProduto(formData: FormData) {
     productId = id;
   }
 
-  // Sincroniza vínculos de grupos de adicionais
+  // Sincroniza vínculos de grupos de adicionais (com regras por grupo)
   await prisma.productComplementGroup.deleteMany({ where: { productId } });
   if (validGroupIds.length) {
     await prisma.productComplementGroup.createMany({
-      data: validGroupIds.map((groupId, index) => ({
-        productId,
-        groupId,
-        required: false,
-        min: 0,
-        max: 0,
-        position: index,
-      })),
+      data: validGroupIds.map((groupId, index) => {
+        const min = nonNegInt(formData.get(`group_${groupId}_min`));
+        const maxRaw = nonNegInt(formData.get(`group_${groupId}_max`));
+        // garante min <= max quando há limite (max=0 = sem limite)
+        const max = maxRaw > 0 && maxRaw < min ? min : maxRaw;
+        return {
+          productId,
+          groupId,
+          required: formData.get(`group_${groupId}_required`) != null,
+          min,
+          max,
+          position: index,
+        };
+      }),
     });
   }
 

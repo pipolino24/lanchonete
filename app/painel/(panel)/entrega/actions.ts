@@ -33,17 +33,38 @@ export async function salvarConfigEntrega(formData: FormData) {
 export async function criarFaixa(formData: FormData) {
   const session = await requireSession();
 
-  const labelRaw = String(formData.get("label") ?? "").trim();
-  const label = labelRaw === "" ? null : labelRaw;
+  const store = await prisma.store.findUnique({
+    where: { id: session.storeId },
+    select: { deliveryMode: true },
+  });
+  const deliveryMode = store?.deliveryMode ?? "KM";
 
-  const kmRaw = String(formData.get("maxKm") ?? "").trim().replace(",", ".");
-  const kmNum = parseFloat(kmRaw);
-  const maxKm = kmRaw === "" || Number.isNaN(kmNum) ? null : kmNum;
+  const labelRaw = String(formData.get("label") ?? "").trim();
+  // Bairro é obrigatório no modo NEIGHBORHOOD; ignorado no modo FIXED.
+  const label = deliveryMode === "FIXED" ? null : labelRaw === "" ? null : labelRaw;
+
+  if (deliveryMode === "NEIGHBORHOOD" && label === null) return;
+
+  // maxKm só faz sentido no modo KM.
+  let maxKm: number | null = null;
+  if (deliveryMode === "KM") {
+    const kmRaw = String(formData.get("maxKm") ?? "").trim().replace(",", ".");
+    const kmNum = parseFloat(kmRaw);
+    maxKm = kmRaw === "" || Number.isNaN(kmNum) ? null : kmNum;
+  }
 
   const fee = parseToCents(String(formData.get("fee") ?? ""));
 
   const etaRaw = parseInt(String(formData.get("etaMinutes") ?? ""), 10);
   const etaMinutes = Number.isNaN(etaRaw) || etaRaw < 0 ? 30 : etaRaw;
+
+  // No modo FIXED existe apenas uma taxa fixa: não cria uma segunda.
+  if (deliveryMode === "FIXED") {
+    const existing = await prisma.deliveryZone.count({
+      where: { storeId: session.storeId },
+    });
+    if (existing > 0) return;
+  }
 
   const last = await prisma.deliveryZone.findFirst({
     where: { storeId: session.storeId },

@@ -36,7 +36,10 @@ export type ProdutoInitial = {
   active: boolean;
   removableIngredients: string[];
   groupIds: string[];
+  groupRules: Record<string, { required: boolean; min: number; max: number }>;
 };
+
+type GroupRule = { on: boolean; required: boolean; min: number; max: number };
 
 const inputCls =
   "w-full rounded-lg border border-coal-700 bg-coal-900 px-3 py-2.5 text-sm text-cream placeholder:text-ash-dark focus:border-ember-500 focus:outline-none";
@@ -68,6 +71,25 @@ export function ProdutoForm({
 }) {
   const isNew = !initial;
   const [type, setType] = useState<ProductTypeValue>(initial?.type ?? "COMMON");
+
+  const [groupRules, setGroupRules] = useState<Record<string, GroupRule>>(() => {
+    const map: Record<string, GroupRule> = {};
+    for (const g of groups) {
+      const rule = initial?.groupRules?.[g.id];
+      const on = initial?.groupIds.includes(g.id) ?? false;
+      map[g.id] = {
+        on,
+        required: rule?.required ?? false,
+        min: rule?.min ?? 0,
+        max: rule?.max ?? 0,
+      };
+    }
+    return map;
+  });
+
+  function updateRule(id: string, patch: Partial<GroupRule>) {
+    setGroupRules((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }
 
   return (
     <>
@@ -287,29 +309,95 @@ export function ProdutoForm({
         {/* Grupos de adicionais */}
         <div className="rounded-2xl border border-coal-800 bg-coal-900/60 p-5">
           <h3 className="mb-1 font-display text-sm font-bold text-cream">Grupos de adicionais</h3>
-          <p className="mb-4 text-xs text-ash">Selecione os grupos que aparecem para este produto.</p>
+          <p className="mb-4 text-xs text-ash">
+            Selecione os grupos que aparecem para este produto e defina as regras de cada um.
+          </p>
 
           {groups.length === 0 ? (
             <p className="text-sm text-ash-dark">
               Nenhum grupo cadastrado. Crie grupos na área de Adicionais.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {groups.map((g) => (
-                <label
-                  key={g.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-coal-700 bg-coal-850 px-3 py-2.5 text-sm text-cream"
-                >
-                  <input
-                    type="checkbox"
-                    name="groupIds"
-                    value={g.id}
-                    defaultChecked={initial?.groupIds.includes(g.id) ?? false}
-                    className="h-4 w-4 accent-ember-500"
-                  />
-                  {g.title}
-                </label>
-              ))}
+            <div className="space-y-2">
+              {groups.map((g) => {
+                const rule = groupRules[g.id];
+                const on = rule?.on ?? false;
+                return (
+                  <div
+                    key={g.id}
+                    className={cn(
+                      "rounded-lg border bg-coal-850 px-3 py-2.5 transition-colors",
+                      on ? "border-ember-500/60" : "border-coal-700",
+                    )}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-cream">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={(e) => updateRule(g.id, { on: e.target.checked })}
+                        className="h-4 w-4 accent-ember-500"
+                      />
+                      <span className="font-medium">{g.title}</span>
+                    </label>
+
+                    {on && (
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-coal-700 pt-3 sm:grid-cols-3">
+                        <label className="flex items-center justify-between gap-2 rounded-lg border border-coal-700 bg-coal-900 px-3 py-2 sm:col-span-1">
+                          <span className="text-xs text-ash">Obrigatório</span>
+                          <input
+                            type="checkbox"
+                            checked={rule.required}
+                            onChange={(e) => updateRule(g.id, { required: e.target.checked })}
+                            className="h-4 w-4 accent-ember-500"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <Label>Mín</Label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={rule.min}
+                            onChange={(e) =>
+                              updateRule(g.id, {
+                                min: Math.max(0, parseInt(e.target.value, 10) || 0),
+                              })
+                            }
+                            className={inputCls}
+                          />
+                        </label>
+
+                        <label className="block">
+                          <Label>Máx (0 = sem limite)</Label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={rule.max}
+                            onChange={(e) =>
+                              updateRule(g.id, {
+                                max: Math.max(0, parseInt(e.target.value, 10) || 0),
+                              })
+                            }
+                            className={inputCls}
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Campos enviados no FormData */}
+                    {on && (
+                      <>
+                        <input type="hidden" name="groupIds" value={g.id} />
+                        {rule.required && (
+                          <input type="hidden" name={`group_${g.id}_required`} value="1" />
+                        )}
+                        <input type="hidden" name={`group_${g.id}_min`} value={String(rule.min)} />
+                        <input type="hidden" name={`group_${g.id}_max`} value={String(rule.max)} />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

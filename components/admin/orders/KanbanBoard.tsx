@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bike, Store, Armchair, ChevronRight, Clock, Phone, MapPin, X,
-  Printer, Ban, RefreshCw, Check,
+  Printer, Ban, RefreshCw, Check, Search, StickyNote, User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/money";
-import { advanceOrder, cancelOrder } from "@/app/painel/(panel)/pedidos/actions";
+import {
+  advanceOrder, cancelOrder, atribuirEntregador, salvarAnotacaoCliente,
+} from "@/app/painel/(panel)/pedidos/actions";
 import { cn } from "@/lib/utils";
+
+export type KanbanDriver = { id: string; name: string };
 
 export type KanbanOrder = {
   id: string;
@@ -29,6 +33,9 @@ export type KanbanOrder = {
   discount: number;
   total: number;
   createdAt: string;
+  driverId: string | null;
+  customerId: string | null;
+  customerNotes: string | null;
   items: {
     id: string;
     name: string;
@@ -53,6 +60,26 @@ const TABS = [
   { key: "PICKUP", label: "Retirada", icon: Store },
 ] as const;
 
+const PERIODS = [
+  { key: "TODAY", label: "Hoje" },
+  { key: "7D", label: "7 dias" },
+  { key: "30D", label: "30 dias" },
+  { key: "ALL", label: "Tudo" },
+] as const;
+
+type PeriodKey = (typeof PERIODS)[number]["key"];
+
+function periodStart(key: PeriodKey): number | null {
+  if (key === "ALL") return null;
+  const now = new Date();
+  if (key === "TODAY") {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return d.getTime();
+  }
+  const days = key === "7D" ? 7 : 30;
+  return now.getTime() - days * 24 * 60 * 60 * 1000;
+}
+
 const TYPE_LABEL: Record<string, string> = { DELIVERY: "Delivery", PICKUP: "Retirada", DINEIN: "Mesa" };
 const PAYMENT_LABEL: Record<string, string> = {
   PIX: "Pix", CASH: "Dinheiro", CREDIT: "Crédito", DEBIT: "Débito",
@@ -67,9 +94,11 @@ function timeOf(iso: string) {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function KanbanBoard({ orders }: { orders: KanbanOrder[] }) {
+export function KanbanBoard({ orders, drivers = [] }: { orders: KanbanOrder[]; drivers?: KanbanDriver[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("ALL");
+  const [period, setPeriod] = useState<PeriodKey>("TODAY");
+  const [search, setSearch] = useState("");
   const [detail, setDetail] = useState<KanbanOrder | null>(null);
   const [, startTransition] = useTransition();
 
@@ -79,7 +108,29 @@ export function KanbanBoard({ orders }: { orders: KanbanOrder[] }) {
     return () => clearInterval(id);
   }, [router]);
 
-  const filtered = orders.filter((o) => (tab === "ALL" ? true : o.type === tab) && o.status !== "CANCELED");
+  // Mantém o slide-over sincronizado com os dados após refresh/ações
+  useEffect(() => {
+    if (!detail) return;
+    const fresh = orders.find((o) => o.id === detail.id);
+    if (fresh && fresh !== detail) setDetail(fresh);
+  }, [orders, detail]);
+
+  const filtered = useMemo(() => {
+    const start = periodStart(period);
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (o.status === "CANCELED") return false;
+      if (tab !== "ALL" && o.type !== tab) return false;
+      if (start !== null && new Date(o.createdAt).getTime() < start) return false;
+      if (q) {
+        const matchName = (o.customerName ?? "").toLowerCase().includes(q);
+        const matchCode = String(o.code).toLowerCase().includes(q);
+        if (!matchName && !matchCode) return false;
+      }
+      return true;
+    });
+  }, [orders, tab, period, search]);
+
   const byStatus = (s: string) => filtered.filter((o) => o.status === s);
 
   function handleAdvance(id: string) {
@@ -124,6 +175,32 @@ export function KanbanBoard({ orders }: { orders: KanbanOrder[] }) {
         >
           <RefreshCw size={14} /> Atualizar
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[220px] flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ash-dark" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por cliente ou código…"
+            className="w-full rounded-lg border border-coal-700 bg-coal-900 py-2.5 pl-9 pr-3 text-sm text-cream placeholder:text-ash-dark focus:border-ember-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex gap-1 rounded-xl bg-coal-850 p-1 ring-1 ring-coal-800">
+          {PERIODS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                period === p.key ? "bg-ember-500 text-white" : "text-ash hover:text-cream",
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -196,6 +273,7 @@ export function KanbanBoard({ orders }: { orders: KanbanOrder[] }) {
       {detail && (
         <OrderDetail
           order={detail}
+          drivers={drivers}
           onClose={() => setDetail(null)}
           onAdvance={() => handleAdvance(detail.id)}
           onCancel={() => handleCancel(detail.id)}
@@ -206,9 +284,10 @@ export function KanbanBoard({ orders }: { orders: KanbanOrder[] }) {
 }
 
 function OrderDetail({
-  order, onClose, onAdvance, onCancel,
+  order, drivers, onClose, onAdvance, onCancel,
 }: {
   order: KanbanOrder;
+  drivers: KanbanDriver[];
   onClose: () => void;
   onAdvance: () => void;
   onCancel: () => void;
@@ -216,6 +295,30 @@ function OrderDetail({
   const steps = ["NEW", "PREPARING", "DELIVERING", "COMPLETED"];
   const currentIdx = steps.indexOf(order.status);
   const stepLabels = ["Entrada", "Preparo", "Entrega", "Concluído"];
+
+  const [savingDriver, startDriverTransition] = useTransition();
+  const [notes, setNotes] = useState(order.customerNotes ?? "");
+  const [savingNotes, startNotesTransition] = useTransition();
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  // Sincroniza a nota quando o pedido em foco muda
+  useEffect(() => {
+    setNotes(order.customerNotes ?? "");
+    setNotesSaved(false);
+  }, [order.id, order.customerNotes]);
+
+  function handleAssignDriver(driverId: string) {
+    startDriverTransition(async () => {
+      await atribuirEntregador(order.id, driverId);
+    });
+  }
+
+  function handleSaveNotes() {
+    startNotesTransition(async () => {
+      await salvarAnotacaoCliente(order.id, notes);
+      setNotesSaved(true);
+    });
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -265,6 +368,61 @@ function OrderDetail({
               </p>
             )}
           </div>
+
+          {/* Entregador (apenas delivery) */}
+          {order.type === "DELIVERY" && (
+            <div className="rounded-xl border border-coal-800 bg-coal-850 p-3">
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-cream">
+                <User size={14} /> Entregador
+              </label>
+              <select
+                value={order.driverId ?? ""}
+                disabled={savingDriver}
+                onChange={(e) => handleAssignDriver(e.target.value)}
+                className="w-full rounded-lg border border-coal-700 bg-coal-900 px-3 py-2.5 text-sm text-cream placeholder:text-ash-dark focus:border-ember-500 focus:outline-none disabled:opacity-60"
+              >
+                <option value="">Sem entregador</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              {order.driverId && (
+                <p className="mt-1.5 text-xs text-ash">
+                  Atribuído a {drivers.find((d) => d.id === order.driverId)?.name ?? "entregador removido"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Anotações internas do cliente */}
+          {order.customerId && (
+            <div className="rounded-xl border border-coal-800 bg-coal-850 p-3">
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-cream">
+                <StickyNote size={14} /> Anotações internas do cliente
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setNotesSaved(false);
+                }}
+                rows={3}
+                placeholder="Preferências, observações, histórico…"
+                className="w-full resize-none rounded-lg border border-coal-700 bg-coal-900 px-3 py-2.5 text-sm text-cream placeholder:text-ash-dark focus:border-ember-500 focus:outline-none"
+              />
+              <div className="mt-2 flex items-center justify-end gap-2">
+                {notesSaved && <span className="text-xs text-success">Salvo</span>}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? "Salvando…" : "Salvar"}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Itens */}
           <div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ShoppingBag, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ShoppingBag, Star, Search, X } from "lucide-react";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CategoryNav } from "@/components/store/CategoryNav";
 import { DesktopCategoryRail } from "@/components/store/DesktopCategoryRail";
@@ -36,6 +36,7 @@ export function StoreView({ data }: { data: StoreViewData }) {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<"cart" | "identify">("cart");
+  const [query, setQuery] = useState("");
   const items = useCart((s) => s.items);
   const count = cartCount(items);
   const subtotal = cartSubtotal(items);
@@ -43,6 +44,19 @@ export function StoreView({ data }: { data: StoreViewData }) {
   useEffect(() => {
     useCart.getState().setStore(data.slug);
   }, [data.slug]);
+
+  const q = query.trim().toLowerCase();
+  const searchResults = useMemo(() => {
+    if (!q) return null;
+    const all = data.categories.flatMap((c) =>
+      c.products.map((p) => ({ product: p, emoji: c.emoji })),
+    );
+    return all.filter(
+      ({ product }) =>
+        product.name.toLowerCase().includes(q) ||
+        (product.description ?? "").toLowerCase().includes(q),
+    );
+  }, [q, data.categories]);
 
   function openCheckout(step: "cart" | "identify") {
     setCheckoutStep(step);
@@ -81,6 +95,42 @@ export function StoreView({ data }: { data: StoreViewData }) {
 
           {/* Produtos */}
           <div className="min-w-0">
+            {/* Busca */}
+            <div className="relative mb-4">
+              <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ash-dark" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar no cardápio..."
+                className="w-full rounded-xl border border-coal-700 bg-coal-850 py-3 pl-11 pr-10 text-sm text-cream placeholder:text-ash-dark focus:border-ember-500 focus:outline-none"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ash-dark hover:text-cream"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {searchResults !== null ? (
+              <section className="py-2">
+                <h2 className="mb-3 font-display text-xl font-bold text-cream">
+                  {searchResults.length} resultado{searchResults.length === 1 ? "" : "s"} para “{query}”
+                </h2>
+                {searchResults.length === 0 ? (
+                  <p className="py-10 text-center text-ash">Nada encontrado. Tente outro termo.</p>
+                ) : (
+                  <div className="grid gap-2.5 xl:grid-cols-2">
+                    {searchResults.map(({ product, emoji }) => (
+                      <ProductCard key={product.id} product={product} emoji={emoji ?? "🍔"} onSelect={setSelectedProduct} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : (
+            <>
             {data.featured.length > 0 && (
               <section className="pb-2">
                 <h2 className="mb-3 flex items-center gap-2 font-display text-xl font-bold text-cream">
@@ -120,6 +170,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
                 </div>
               </section>
             ))}
+            </>
+            )}
 
             <footer className="flex flex-col items-center gap-2 py-10 text-center">
               <Logo size="sm" />

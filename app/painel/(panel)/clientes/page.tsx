@@ -1,43 +1,24 @@
-import Link from "next/link";
-import { Users, ShoppingBag, TrendingUp, UserPlus, Phone, Trash2, Gift } from "lucide-react";
+import { Users, ShoppingBag, TrendingUp, UserPlus, Gift } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { PageHeader, Card, StatCard, EmptyState } from "@/components/admin/ui";
-import { criarCliente, excluirCliente } from "./actions";
+import { PageHeader, Card, StatCard } from "@/components/admin/ui";
+import { ClientesTabs, type ClienteRow } from "@/components/admin/clientes/ClientesTabs";
+import { ExportButton, type ExportCustomer } from "@/components/admin/clientes/ExportButton";
+import { criarCliente } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const dateFmt = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
-export default async function ClientesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ filtro?: string }>;
-}) {
+export default async function ClientesPage() {
   const session = await requireSession();
   const storeId = session.storeId;
-
-  const { filtro } = await searchParams;
-  const onlyNew = filtro === "novos";
 
   const last7 = new Date();
   last7.setDate(last7.getDate() - 7);
 
-  const [
-    totalCustomers,
-    newCustomers,
-    totalOrders,
-    avgAgg,
-    customers,
-  ] = await Promise.all([
+  const [totalCustomers, newCustomers, totalOrders, avgAgg, customers] = await Promise.all([
     prisma.customer.count({ where: { storeId } }),
     prisma.customer.count({ where: { storeId, createdAt: { gte: last7 } } }),
     prisma.order.count({ where: { storeId } }),
@@ -46,10 +27,7 @@ export default async function ClientesPage({
       _avg: { total: true },
     }),
     prisma.customer.findMany({
-      where: {
-        storeId,
-        ...(onlyNew ? { createdAt: { gte: last7 } } : {}),
-      },
+      where: { storeId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -57,23 +35,40 @@ export default async function ClientesPage({
         phone: true,
         createdAt: true,
         _count: { select: { orders: true } },
+        orders: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true },
+        },
       },
     }),
   ]);
 
   const ticket = Math.round(avgAgg._avg.total ?? 0);
 
-  const tabs = [
-    { key: "todos", label: "Todos", href: "/painel/clientes" },
-    { key: "novos", label: "Novos (7 dias)", href: "/painel/clientes?filtro=novos" },
-  ];
-  const activeKey = onlyNew ? "novos" : "todos";
+  // Normaliza para datas serializáveis (ISO) e calcula o último pedido.
+  const rows: ClienteRow[] = customers.map((c) => ({
+    id: c.id,
+    name: c.name,
+    phone: c.phone,
+    createdAt: c.createdAt.toISOString(),
+    ordersCount: c._count.orders,
+    lastOrderAt: c.orders[0]?.createdAt.toISOString() ?? null,
+  }));
+
+  const exportRows: ExportCustomer[] = rows.map((c) => ({
+    name: c.name,
+    phone: c.phone,
+    ordersCount: c.ordersCount,
+    createdAt: c.createdAt,
+  }));
 
   return (
     <>
       <PageHeader
         title="Clientes"
         subtitle="Base de clientes da sua loja"
+        actions={<ExportButton customers={exportRows} />}
       />
 
       {/* Configuração de Cashback (recurso futuro) */}
@@ -171,89 +166,7 @@ export default async function ClientesPage({
 
       {/* Filtros + Lista */}
       <Card className="mt-4">
-        <div className="mb-4 flex items-center gap-2">
-          {tabs.map((t) => (
-            <Link
-              key={t.key}
-              href={t.href}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                activeKey === t.key
-                  ? "bg-ember-500/15 text-ember-400 ring-1 ring-ember-500/25"
-                  : "text-ash hover:bg-coal-800 hover:text-cream",
-              )}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-
-        {customers.length === 0 ? (
-          <EmptyState
-            icon={<Users size={28} />}
-            title={onlyNew ? "Nenhum cliente novo" : "Nenhum cliente ainda"}
-            description={
-              onlyNew
-                ? "Nenhum cadastro nos últimos 7 dias."
-                : "Cadastre seu primeiro cliente usando o formulário acima."
-            }
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-coal-800 text-left text-xs font-medium uppercase tracking-wide text-ash-dark">
-                  <th className="px-3 py-2.5 font-medium">Cliente</th>
-                  <th className="px-3 py-2.5 font-medium">Telefone</th>
-                  <th className="px-3 py-2.5 text-center font-medium">Pedidos</th>
-                  <th className="px-3 py-2.5 font-medium">Cadastro</th>
-                  <th className="px-3 py-2.5" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-coal-800">
-                {customers.map((c) => {
-                  const isNew = c.createdAt >= last7;
-                  return (
-                    <tr key={c.id} className="text-cream">
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{c.name}</span>
-                          {isNew && <Badge tone="success">Novo</Badge>}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-ash">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Phone size={14} className="text-ash-dark" />
-                          {c.phone}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <Badge tone={c._count.orders > 0 ? "ember" : "neutral"}>
-                          {c._count.orders}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-3 text-ash">{dateFmt.format(c.createdAt)}</td>
-                      <td className="px-3 py-3 text-right">
-                        <form action={excluirCliente.bind(null, c.id)}>
-                          <Button
-                            type="submit"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Excluir ${c.name}`}
-                            title="Excluir cliente"
-                            className="text-ash-dark hover:text-danger"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </form>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ClientesTabs customers={rows} />
       </Card>
     </>
   );

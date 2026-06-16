@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   X, ChevronLeft, Trash2, Plus, Minus, Bike, ShoppingBag,
@@ -74,6 +75,27 @@ export function CartSheet({
     customer.name.trim() &&
     customer.phone.trim() &&
     (orderType !== "DELIVERY" || (address.street.trim() && address.number.trim()));
+
+  async function lookupCep(value: string) {
+    setAddress({ zipCode: value });
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+        const d = await res.json();
+        if (!d.erro) {
+          setAddress({
+            street: d.logradouro || "",
+            neighborhood: d.bairro || "",
+            city: d.localidade || "",
+            state: d.uf || "",
+          });
+        }
+      } catch {
+        /* ignora falha de CEP */
+      }
+    }
+  }
 
   async function submit() {
     setSubmitting(true);
@@ -170,7 +192,7 @@ export function CartSheet({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="CEP">
-                      <input value={address.zipCode} onChange={(e) => setAddress({ zipCode: e.target.value })} className="input" placeholder="00000-000" />
+                      <input value={address.zipCode} onChange={(e) => lookupCep(e.target.value)} className="input" placeholder="00000-000" inputMode="numeric" />
                     </Field>
                     <Field label="Número">
                       <input value={address.number} onChange={(e) => setAddress({ number: e.target.value })} className="input" placeholder="123" />
@@ -253,9 +275,16 @@ export function CartSheet({
               <p className="mt-2 max-w-xs text-sm text-ash">
                 Já recebemos seu pedido e ele está sendo preparado. 🔥
               </p>
-              <Button className="mt-6" onClick={onClose}>
-                Voltar ao cardápio
-              </Button>
+              <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
+                {orderCode && (
+                  <Link href={`/cardapio/${slug}/pedido/${encodeURIComponent(orderCode)}`}>
+                    <Button className="w-full">Acompanhar pedido</Button>
+                  </Link>
+                )}
+                <Button variant="ghost" onClick={onClose}>
+                  Voltar ao cardápio
+                </Button>
+              </div>
             </div>
           )}
         </div>

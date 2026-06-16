@@ -54,6 +54,16 @@ export default async function EntregaPage() {
   const prepTime = store?.prepTime ?? 40;
   const freeShippingAbove = store?.freeShippingAbove ?? null;
 
+  const isKm = deliveryMode === "KM";
+  const isNeighborhood = deliveryMode === "NEIGHBORHOOD";
+  const isFixed = deliveryMode === "FIXED";
+
+  // No modo FIXED existe apenas uma taxa fixa. Se já houver uma faixa, escondemos o formulário.
+  const fixedZoneExists = isFixed && zones.length > 0;
+
+  const firstColLabel = isKm ? "Faixa" : isNeighborhood ? "Bairro" : "Taxa fixa";
+  const zonesTitle = isNeighborhood ? "Bairros atendidos" : isFixed ? "Taxa de entrega" : "Faixas de entrega";
+
   return (
     <>
       <PageHeader
@@ -117,22 +127,35 @@ export default async function EntregaPage() {
         <Card className="lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <MapPin size={18} className="text-ember-400" />
-            <h2 className="font-semibold text-cream">Faixas de entrega</h2>
+            <h2 className="font-semibold text-cream">{zonesTitle}</h2>
+            <Badge tone="neutral">{MODE_LABEL[deliveryMode]}</Badge>
           </div>
 
           {zones.length === 0 ? (
             <EmptyState
               icon={<MapPin size={28} />}
-              title="Nenhuma faixa cadastrada"
-              description="Adicione faixas com taxa e prazo para cobrir suas regiões de atendimento."
+              title={
+                isNeighborhood
+                  ? "Nenhum bairro cadastrado"
+                  : isFixed
+                    ? "Taxa fixa não definida"
+                    : "Nenhuma faixa cadastrada"
+              }
+              description={
+                isNeighborhood
+                  ? "Adicione os bairros que você atende com taxa e prazo de entrega."
+                  : isFixed
+                    ? "Defina uma única taxa fixa de entrega com seu prazo."
+                    : "Adicione faixas com taxa e prazo para cobrir suas regiões de atendimento."
+              }
             />
           ) : (
             <div className="overflow-hidden rounded-xl border border-coal-800">
               <table className="w-full text-left text-sm">
                 <thead className="bg-coal-850 text-xs uppercase text-ash-dark">
                   <tr>
-                    <th className="px-3 py-2.5 font-medium">Faixa</th>
-                    <th className="px-3 py-2.5 font-medium">Até (km)</th>
+                    <th className="px-3 py-2.5 font-medium">{firstColLabel}</th>
+                    {isKm && <th className="px-3 py-2.5 font-medium">Até (km)</th>}
                     <th className="px-3 py-2.5 font-medium">Taxa</th>
                     <th className="px-3 py-2.5 font-medium">Prazo</th>
                     <th className="px-3 py-2.5 text-center font-medium">Ativa</th>
@@ -143,11 +166,15 @@ export default async function EntregaPage() {
                   {zones.map((z) => (
                     <tr key={z.id} className="text-cream">
                       <td className="px-3 py-2.5 font-medium">
-                        {z.label ?? <span className="text-ash">Sem nome</span>}
+                        {isFixed
+                          ? "Taxa fixa"
+                          : (z.label ?? <span className="text-ash">Sem nome</span>)}
                       </td>
-                      <td className="px-3 py-2.5 text-ash">
-                        {z.maxKm != null ? `${z.maxKm} km` : "—"}
-                      </td>
+                      {isKm && (
+                        <td className="px-3 py-2.5 text-ash">
+                          {z.maxKm != null ? `${z.maxKm} km` : "—"}
+                        </td>
+                      )}
                       <td className="px-3 py-2.5 font-semibold text-ember-400">
                         {formatPrice(z.fee)}
                       </td>
@@ -170,51 +197,79 @@ export default async function EntregaPage() {
             </div>
           )}
 
-          <form
-            action={criarFaixa}
-            className="mt-4 grid gap-3 rounded-xl border border-coal-800 bg-coal-900/40 p-4 sm:grid-cols-2 lg:grid-cols-5"
-          >
-            <label className="block lg:col-span-2">
-              <Label>Nome / bairro</Label>
-              <input type="text" name="label" placeholder="Centro" className={INPUT} />
-            </label>
-            <label className="block">
-              <Label>Até (km)</Label>
-              <input
-                type="text"
-                inputMode="decimal"
-                name="maxKm"
-                placeholder="5"
-                className={INPUT}
-              />
-            </label>
-            <label className="block">
-              <Label>Taxa (R$)</Label>
-              <input
-                type="text"
-                inputMode="decimal"
-                name="fee"
-                placeholder="8,00"
-                className={INPUT}
-              />
-            </label>
-            <label className="block">
-              <Label>Prazo (min)</Label>
-              <input
-                type="number"
-                name="etaMinutes"
-                min={0}
-                step={1}
-                placeholder="30"
-                className={INPUT}
-              />
-            </label>
-            <div className="sm:col-span-2 lg:col-span-5">
-              <Button type="submit" variant="secondary" size="sm">
-                <Plus size={16} /> Adicionar faixa
-              </Button>
-            </div>
-          </form>
+          {fixedZoneExists ? (
+            <p className="mt-4 rounded-xl border border-coal-800 bg-coal-900/40 p-4 text-xs text-ash-dark">
+              No modo de taxa fixa existe apenas uma taxa. Para alterar, exclua a taxa
+              atual e cadastre uma nova.
+            </p>
+          ) : (
+            <form
+              action={criarFaixa}
+              className="mt-4 grid gap-3 rounded-xl border border-coal-800 bg-coal-900/40 p-4 sm:grid-cols-2 lg:grid-cols-5"
+            >
+              {isNeighborhood && (
+                <label className="block lg:col-span-2">
+                  <Label>Bairro</Label>
+                  <input
+                    type="text"
+                    name="label"
+                    required
+                    placeholder="Centro"
+                    className={INPUT}
+                  />
+                </label>
+              )}
+              {isKm && (
+                <>
+                  <label className="block lg:col-span-2">
+                    <Label>Nome da faixa</Label>
+                    <input type="text" name="label" placeholder="Centro" className={INPUT} />
+                  </label>
+                  <label className="block">
+                    <Label>Até (km)</Label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="maxKm"
+                      placeholder="5"
+                      className={INPUT}
+                    />
+                  </label>
+                </>
+              )}
+              <label className="block">
+                <Label>Taxa (R$)</Label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="fee"
+                  placeholder="8,00"
+                  className={INPUT}
+                />
+              </label>
+              <label className="block">
+                <Label>Prazo (min)</Label>
+                <input
+                  type="number"
+                  name="etaMinutes"
+                  min={0}
+                  step={1}
+                  placeholder="30"
+                  className={INPUT}
+                />
+              </label>
+              <div className="sm:col-span-2 lg:col-span-5">
+                <Button type="submit" variant="secondary" size="sm">
+                  <Plus size={16} />{" "}
+                  {isNeighborhood
+                    ? "Adicionar bairro"
+                    : isFixed
+                      ? "Definir taxa fixa"
+                      : "Adicionar faixa"}
+                </Button>
+              </div>
+            </form>
+          )}
         </Card>
       </div>
 

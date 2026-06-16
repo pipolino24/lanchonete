@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutGrid, ClipboardList, ShoppingCart, UtensilsCrossed, PlusSquare,
   Users, Ticket, Bike, CreditCard, Clock, BarChart3, Wallet, QrCode,
-  Store, LogOut, Armchair,
+  Store, LogOut, Armchair, ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { logoutAction } from "@/app/painel/actions";
@@ -27,6 +27,7 @@ const NAV: { href: string; label: string; icon: React.ElementType }[] = [
   { href: "/painel/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/painel/qrcode", label: "QR Code", icon: QrCode },
   { href: "/painel/loja", label: "Minha loja", icon: Store },
+  { href: "/painel/acessos", label: "Acessos", icon: ShieldCheck },
 ];
 
 export function Sidebar({

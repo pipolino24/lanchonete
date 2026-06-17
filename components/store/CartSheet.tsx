@@ -367,7 +367,9 @@ export function CartSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg animate-slide-up flex-col overflow-hidden rounded-t-3xl border border-coal-700 bg-coal-900 sm:rounded-3xl">
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg animate-slide-up flex-col overflow-hidden rounded-t-3xl border border-coal-700 bg-coal-900 sm:rounded-3xl lg:max-h-[86vh] lg:w-auto lg:max-w-3xl lg:flex-row">
+        {/* Coluna esquerda — fluxo */}
+        <div className="flex min-h-0 w-full flex-col lg:w-[440px]">
         {/* Cabeçalho */}
         <div className="flex items-center gap-2 border-b border-coal-800 p-4">
           {step !== "cart" && step !== "success" && (
@@ -801,7 +803,7 @@ export function CartSheet({
         {step !== "success" && (
           <div className="border-t border-coal-700 bg-coal-900 p-4">
             {(step === "phone" || step === "code" || step === "register") && (
-              <div className="mb-3 flex items-center justify-between text-sm">
+              <div className="mb-3 flex items-center justify-between text-sm lg:hidden">
                 <span className="text-ash">Subtotal do pedido</span>
                 <PriceFlow cents={subtotal} className="text-base font-bold text-cream" />
               </div>
@@ -857,7 +859,7 @@ export function CartSheet({
             )}
             {step === "address" && (
               <>
-                <div className="mb-3">
+                <div className="mb-3 lg:hidden">
                   <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
                 </div>
                 <Button
@@ -871,7 +873,7 @@ export function CartSheet({
             )}
             {step === "payment" && (
               <>
-                <div className="mb-3">
+                <div className="mb-3 lg:hidden">
                   <Totals subtotal={subtotal} deliveryFee={deliveryFee} orderType={orderType} total={total} />
                 </div>
                 <Button className="w-full" disabled={!payment} onClick={() => setStep("review")}>
@@ -895,6 +897,20 @@ export function CartSheet({
               </Button>
             )}
           </div>
+        )}
+        </div>
+        {/* Coluna direita — Resumo do Pedido (desktop) */}
+        {step !== "cart" && step !== "success" && (
+          <aside className="hidden w-[300px] shrink-0 border-l border-coal-800 bg-coal-950/50 lg:block">
+            <ResumoPedido
+              items={items}
+              subtotal={subtotal}
+              deliveryFee={deliveryFee}
+              orderType={orderType}
+              total={total}
+              showFrete={step === "address" || step === "payment" || step === "review"}
+            />
+          </aside>
         )}
       </div>
 
@@ -1060,6 +1076,56 @@ function Summary({ items }: { items: CartLine[] }) {
           <span className="text-ash">{formatPrice(lineTotal(it))}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Card "Resumo do Pedido" persistente (coluna lateral no desktop). */
+function ResumoPedido({
+  items, subtotal, deliveryFee, orderType, total, showFrete,
+}: {
+  items: CartLine[];
+  subtotal: number;
+  deliveryFee: number;
+  orderType: OrderType;
+  total: number;
+  showFrete: boolean;
+}) {
+  return (
+    <div className="flex h-full flex-col p-5">
+      <h3 className="font-display text-lg font-bold text-cream">Resumo do Pedido</h3>
+      <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
+        {items.length === 0 ? (
+          <p className="text-sm text-ash-dark">Seu carrinho está vazio.</p>
+        ) : (
+          items.map((it) => (
+            <div key={it.lineId} className="flex justify-between gap-3 text-sm">
+              <span className="min-w-0 text-ash">
+                <span className="text-cream">{it.quantity}×</span> {it.name}
+              </span>
+              <span className="shrink-0 text-cream">{formatPrice(lineTotal(it))}</span>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="mt-4 space-y-1.5 border-t border-coal-800 pt-3 text-sm">
+        <div className="flex justify-between text-ash">
+          <span>Subtotal</span>
+          <span>{formatPrice(subtotal)}</span>
+        </div>
+        {orderType === "DELIVERY" && (
+          <div className="flex justify-between text-ash">
+            <span>Entrega</span>
+            <span className={!showFrete ? "text-ash-dark" : deliveryFee === 0 ? "font-semibold text-success" : ""}>
+              {!showFrete ? "a calcular" : deliveryFee === 0 ? "GRÁTIS" : formatPrice(deliveryFee)}
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between border-t border-coal-800 pt-2 text-lg font-bold text-cream">
+          <span>Total</span>
+          <PriceFlow cents={showFrete ? total : subtotal} />
+        </div>
+      </div>
     </div>
   );
 }

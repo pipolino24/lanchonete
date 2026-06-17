@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/store/CategoryIcon";
 
 export function CategoryNav({
   categories,
@@ -50,8 +51,10 @@ export function CategoryNav({
                 : "bg-coal-850 text-ash ring-1 ring-coal-700 hover:text-cream",
             )}
           >
-            {c.emoji ? `${c.emoji} ` : ""}
-            {c.name}
+            <span className="flex items-center gap-1.5">
+              <CategoryIcon emoji={c.emoji} size={15} className="shrink-0" />
+              {c.name}
+            </span>
           </button>
         ))}
       </div>

@@ -5,6 +5,7 @@ import { ShoppingBag, Star, Search, X } from "lucide-react";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CategoryNav } from "@/components/store/CategoryNav";
 import { DesktopCategoryRail } from "@/components/store/DesktopCategoryRail";
+import { CategoryIcon } from "@/components/store/CategoryIcon";
 import { MenuItemCard } from "@/components/ui/menu-item-card";
 import { ProductImage } from "@/components/store/ProductImage";
 import { ProductModal } from "@/components/store/ProductModal";
@@ -188,8 +189,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
             {data.categories.map((cat) => (
               <section key={cat.id} id={`cat-${cat.id}`} className="scroll-mt-24 py-4">
                 <Reveal>
-                  <h2 className="mb-3 font-display text-xl font-bold text-cream">
-                    {cat.emoji ? `${cat.emoji} ` : ""}
+                  <h2 className="mb-3 flex items-center gap-2 font-display text-xl font-bold text-cream">
+                    <CategoryIcon emoji={cat.emoji} size={20} className="text-cream" />
                     {cat.name}
                   </h2>
                   <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">

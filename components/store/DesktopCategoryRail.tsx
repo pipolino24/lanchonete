@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/store/CategoryIcon";
 
 export function DesktopCategoryRail({
   categories,
@@ -46,9 +47,9 @@ export function DesktopCategoryRail({
               : "text-ash hover:bg-coal-800 hover:text-cream",
           )}
         >
-          <span className="truncate">
-            {c.emoji ? `${c.emoji} ` : ""}
-            {c.name}
+          <span className="flex min-w-0 items-center gap-2">
+            <CategoryIcon emoji={c.emoji} size={16} className="shrink-0 text-cream" />
+            <span className="truncate">{c.name}</span>
           </span>
           <span className="text-xs text-ash-dark">{c.count}</span>
         </button>

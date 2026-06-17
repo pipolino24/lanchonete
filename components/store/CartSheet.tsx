@@ -96,7 +96,10 @@ export function CartSheet({
 }) {
   const { items, orderType, customer, address, setOrderType, setCustomer, setAddress, updateQty, removeItem, clear } =
     useCart();
-  const [step, setStep] = useState<Step>(initialStep);
+  // Com OTP desligado, nunca abrir no passo de telefone — vai direto p/ endereço
+  const [step, setStep] = useState<Step>(
+    !OTP_ENABLED && initialStep === "phone" ? "address" : initialStep,
+  );
 
   // Identidade (OTP) — o backend é construído à parte; aqui é o front
   const [phone, setPhone] = useState(customer.phone || "");

@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { quoteDelivery } from "@/lib/delivery";
+import { formatPrice } from "@/lib/money";
 import type { OrderType, PaymentMethod, OrderChannel } from "@prisma/client";
+
+/** Erro de regra de negócio cuja mensagem pode ser exibida ao cliente. */
+export class OrderError extends Error {}
 
 export type OrderItemInput = {
   productId: string;
@@ -53,23 +57,29 @@ async function generateOrderCode(storeId: string): Promise<string> {
 export async function createOrder(input: CreateOrderInput) {
   const store = await prisma.store.findUniqueOrThrow({ where: { id: input.storeId } });
 
-  // Revalida preços a partir do banco
+  // Revalida preços a partir do banco — escopo na loja e só produtos ativos
+  // (impede pedir produto de outra loja ou item removido/desativado).
   const productIds = [...new Set(input.items.map((i) => i.productId))];
-  const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, storeId: store.id, active: true },
+  });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
+  // Complementos escopados na loja (via grupo) — não aceita item de outra loja.
   const complementIds = [
     ...new Set(input.items.flatMap((i) => (i.complements ?? []).map((c) => c.itemId))),
   ];
   const complements = complementIds.length
-    ? await prisma.complementItem.findMany({ where: { id: { in: complementIds } } })
+    ? await prisma.complementItem.findMany({
+        where: { id: { in: complementIds }, active: true, group: { storeId: store.id } },
+      })
     : [];
   const complementMap = new Map(complements.map((c) => [c.id, c]));
 
   let subtotal = 0;
   const itemsData = input.items.map((item) => {
     const product = productMap.get(item.productId);
-    if (!product) throw new Error(`Produto inválido: ${item.productId}`);
+    if (!product) throw new OrderError("Um dos itens não está mais disponível. Atualize o cardápio.");
     const base = product.promoPrice ?? product.price;
 
     const comps = (item.complements ?? [])
@@ -107,20 +117,56 @@ export async function createOrder(input: CreateOrderInput) {
     };
   });
 
+  // Pedido mínimo e loja ativa (somente canais públicos; PDV pode burlar)
+  if (input.channel !== "PDV") {
+    if (!store.active) throw new OrderError("Loja indisponível no momento.");
+    if (store.minOrder && subtotal < store.minOrder)
+      throw new OrderError(`Pedido mínimo de ${formatPrice(store.minOrder)}.`);
+  }
+
   // Cupom (resolvido antes do frete, pois pode zerar a entrega)
   let discount = input.discount ?? 0;
   let couponId: string | null = null;
   let couponFreeShipping = false;
   if (input.couponCode) {
+    const now = new Date();
     const coupon = await prisma.coupon.findFirst({
-      where: { storeId: store.id, code: input.couponCode.toUpperCase(), active: true },
+      where: {
+        storeId: store.id,
+        code: input.couponCode.toUpperCase(),
+        active: true,
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+        ],
+      },
     });
     if (coupon && (!coupon.minOrder || subtotal >= coupon.minOrder)) {
-      couponId = coupon.id;
-      if (coupon.discountType === "PERCENT") discount += Math.round((subtotal * coupon.discountValue) / 100);
-      else discount += coupon.discountValue;
-      if (coupon.freeShipping) couponFreeShipping = true;
-      await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
+      // Limite por cliente (conta pedidos anteriores com este cupom + telefone)
+      let perCustomerOk = true;
+      if (coupon.perCustomerLimit != null && input.customer?.phone) {
+        const used = await prisma.order.count({
+          where: { storeId: store.id, couponId: coupon.id, customerPhone: input.customer.phone },
+        });
+        perCustomerOk = used < coupon.perCustomerLimit;
+      }
+      // Limite total: incremento atômico respeitando o teto (fecha a corrida)
+      const inc = await prisma.coupon.updateMany({
+        where: {
+          id: coupon.id,
+          ...(coupon.totalLimit != null ? { usedCount: { lt: coupon.totalLimit } } : {}),
+        },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (perCustomerOk && inc.count === 1) {
+        couponId = coupon.id;
+        if (coupon.discountType === "PERCENT") discount += Math.round((subtotal * coupon.discountValue) / 100);
+        else discount += coupon.discountValue;
+        if (coupon.freeShipping) couponFreeShipping = true;
+      } else if (inc.count === 1) {
+        // passou do limite por cliente: desfaz o incremento total
+        await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { decrement: 1 } } });
+      }
     }
   }
 
@@ -128,16 +174,20 @@ export async function createOrder(input: CreateOrderInput) {
   let deliveryFee = 0;
   if (input.type === "DELIVERY") {
     const quote = await quoteDelivery(store, input.address, subtotal, { couponFreeShipping });
-    if (!quote.served) throw new Error(quote.reason ?? "Endereço fora da área de entrega.");
+    if (!quote.served) throw new OrderError(quote.reason ?? "Endereço fora da área de entrega.");
     deliveryFee = quote.fee;
   }
 
-  // Taxa de pagamento (cartão presencial, etc.)
+  // Taxa de pagamento (cartão presencial, etc.) + valida forma ativa para o tipo
   let paymentFee = 0;
   if (input.paymentMethod) {
     const pc = await prisma.paymentConfig.findFirst({
       where: { storeId: store.id, method: input.paymentMethod },
     });
+    if (input.channel !== "PDV" && pc) {
+      const enabled = input.type === "DELIVERY" ? pc.enabledDelivery : pc.enabledPickup;
+      if (!enabled) throw new OrderError("Forma de pagamento indisponível para este tipo de pedido.");
+    }
     if (pc?.extraFeePercent) paymentFee = Math.round((subtotal * pc.extraFeePercent) / 100);
   }
 

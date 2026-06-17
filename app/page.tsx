@@ -22,19 +22,19 @@ function waLink(whatsapp?: string | null) {
 export default async function Home() {
   const store = await prisma.store.findFirst({ include: { hours: true } });
   const slug = store?.slug ?? "cariri-burguer";
-  const featured = store
-    ? await prisma.product.findMany({
-        where: { storeId: store.id, active: true, featured: true },
-        take: 8,
-      })
-    : [];
-  const heroProducts = store
-    ? await prisma.product.findMany({
-        where: { storeId: store.id, active: true, images: { isEmpty: false } },
-        take: 12,
-        orderBy: { featured: "desc" },
-      })
-    : [];
+  const [featured, heroProducts] = store
+    ? await Promise.all([
+        prisma.product.findMany({
+          where: { storeId: store.id, active: true, featured: true },
+          take: 8,
+        }),
+        prisma.product.findMany({
+          where: { storeId: store.id, active: true, images: { isEmpty: false } },
+          take: 12,
+          orderBy: { featured: "desc" },
+        }),
+      ])
+    : [[], []];
   const open = store ? isOpenNow(store.hours) : false;
   const hero = featured[0] ?? heroProducts[0];
   const wa = waLink(store?.whatsapp);

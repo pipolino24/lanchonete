@@ -141,6 +141,7 @@ model Product {
 
   @@index([storeId])
   @@index([categoryId])
+  @@index([storeId, featured])
 }
 
 // ─────────────────────────────────────────────────────────────

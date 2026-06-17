@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { createOrder } from "@/lib/orders";
+import { createOrder, OrderError } from "@/lib/orders";
 
 const schema = z.object({
   type: z.enum(["DELIVERY", "PICKUP", "DINEIN"]),
@@ -53,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     return NextResponse.json({ id: order.id, code: order.code, total: order.total }, { status: 201 });
   } catch (e) {
     console.error(e);
-    const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
+    const msg = e instanceof OrderError ? e.message : "Não foi possível criar o pedido. Tente novamente.";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

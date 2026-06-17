@@ -47,6 +47,10 @@ const stepVariants = {
   exit: { opacity: 0, x: -48 },
 };
 
+// Liga/desliga o login por OTP (WhatsApp). Desligado = vai direto p/ endereço,
+// coletando nome + telefone na própria tela. Religar: trocar para true.
+const OTP_ENABLED = false;
+
 function formatPhone(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 2) return d;
@@ -132,12 +136,15 @@ export function CartSheet({
   );
 
   const belowMin = subtotal < minOrder;
+  // Com OTP desligado, nome+telefone são coletados na tela de endereço
+  const identityOk = OTP_ENABLED || (customer.name.trim() !== "" && customer.phone.replace(/\D/g, "").length >= 10);
   const addressValid =
-    orderType !== "DELIVERY" ||
-    (address.street.trim() !== "" &&
-      address.number.trim() !== "" &&
-      address.neighborhood.trim() !== "" &&
-      address.city.trim() !== "");
+    identityOk &&
+    (orderType !== "DELIVERY" ||
+      (address.street.trim() !== "" &&
+        address.number.trim() !== "" &&
+        address.neighborhood.trim() !== "" &&
+        address.city.trim() !== ""));
 
   const fetchQuote = useCallback(async () => {
     if (orderType !== "DELIVERY") {
@@ -345,8 +352,8 @@ export function CartSheet({
         case "phone": return "cart";
         case "code": return "phone";
         case "register": return "code";
-        case "address": return "code";
-        case "payment": return orderType === "DELIVERY" ? "address" : "code";
+        case "address": return OTP_ENABLED ? "code" : "cart";
+        case "payment": return orderType === "DELIVERY" ? "address" : OTP_ENABLED ? "code" : "address";
         case "review": return "payment";
         default: return "cart";
       }
@@ -380,7 +387,9 @@ export function CartSheet({
               <ChevronLeft size={18} />
             </button>
           )}
-          <h2 className="flex-1 font-display text-lg font-bold text-cream">{titles[step]}</h2>
+          <h2 className="flex-1 font-display text-lg font-bold text-cream">
+            {step === "address" && !OTP_ENABLED ? "Seus dados" : titles[step]}
+          </h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-ash hover:bg-coal-800">
             <X size={18} />
           </button>
@@ -521,6 +530,28 @@ export function CartSheet({
               {step === "address" && (
                 <div className="space-y-4">
                   <TypeToggle orderType={orderType} onType={setOrderType} />
+
+                  {!OTP_ENABLED && (
+                    <div className="space-y-4">
+                      <Field label="Seu nome">
+                        <input
+                          value={customer.name}
+                          onChange={(e) => setCustomer({ name: e.target.value })}
+                          className="input"
+                          placeholder="Nome completo"
+                        />
+                      </Field>
+                      <Field label="Telefone / WhatsApp">
+                        <input
+                          value={customer.phone}
+                          onChange={(e) => setCustomer({ phone: formatPhone(e.target.value) })}
+                          className="input"
+                          placeholder="(88) 99999-9999"
+                          inputMode="numeric"
+                        />
+                      </Field>
+                    </div>
+                  )}
 
                   {savedAddresses.length > 0 && (
                     <div className="space-y-2">
@@ -824,7 +855,11 @@ export function CartSheet({
                 {belowMin && (
                   <p className="mb-2 text-center text-xs text-warning">Pedido mínimo de {formatPrice(minOrder)}</p>
                 )}
-                <Button className="w-full" disabled={!items.length || belowMin} onClick={() => setStep("phone")}>
+                <Button
+                  className="w-full"
+                  disabled={!items.length || belowMin}
+                  onClick={() => setStep(OTP_ENABLED ? "phone" : "address")}
+                >
                   Continuar
                 </Button>
               </>

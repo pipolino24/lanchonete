@@ -57,24 +57,31 @@ async function generateOrderCode(storeId: string): Promise<string> {
 export async function createOrder(input: CreateOrderInput) {
   const store = await prisma.store.findUniqueOrThrow({ where: { id: input.storeId } });
 
-  // Revalida preços a partir do banco — escopo na loja e só produtos ativos
-  // (impede pedir produto de outra loja ou item removido/desativado).
+  // Revalida tudo a partir do banco, em paralelo: produtos (escopo loja + ativos),
+  // complementos (escopo loja via grupo) e os vínculos produto↔grupo (min/max/obrigatório).
   const productIds = [...new Set(input.items.map((i) => i.productId))];
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, storeId: store.id, active: true },
-  });
-  const productMap = new Map(products.map((p) => [p.id, p]));
-
-  // Complementos escopados na loja (via grupo) — não aceita item de outra loja.
   const complementIds = [
     ...new Set(input.items.flatMap((i) => (i.complements ?? []).map((c) => c.itemId))),
   ];
-  const complements = complementIds.length
-    ? await prisma.complementItem.findMany({
-        where: { id: { in: complementIds }, active: true, group: { storeId: store.id } },
-      })
-    : [];
+  const [products, complements, links] = await Promise.all([
+    prisma.product.findMany({ where: { id: { in: productIds }, storeId: store.id, active: true } }),
+    complementIds.length
+      ? prisma.complementItem.findMany({
+          where: { id: { in: complementIds }, active: true, group: { storeId: store.id } },
+        })
+      : Promise.resolve([]),
+    prisma.productComplementGroup.findMany({ where: { productId: { in: productIds } } }),
+  ]);
+  const productMap = new Map(products.map((p) => [p.id, p]));
   const complementMap = new Map(complements.map((c) => [c.id, c]));
+
+  // grupos permitidos por produto (com required/min/max)
+  const allowedByProduct = new Map<string, { groupId: string; required: boolean; min: number; max: number }[]>();
+  for (const l of links) {
+    const arr = allowedByProduct.get(l.productId) ?? [];
+    arr.push({ groupId: l.groupId, required: l.required, min: l.min, max: l.max });
+    allowedByProduct.set(l.productId, arr);
+  }
 
   let subtotal = 0;
   const itemsData = input.items.map((item) => {
@@ -89,6 +96,23 @@ export async function createOrder(input: CreateOrderInput) {
         return { item: ci, quantity: c.quantity };
       })
       .filter((x): x is { item: (typeof complements)[number]; quantity: number } => x !== null);
+
+    // Valida complementos: pertencem a um grupo do produto + respeitam obrigatório/min/max
+    const allowed = allowedByProduct.get(product.id) ?? [];
+    const allowedGroups = new Set(allowed.map((g) => g.groupId));
+    for (const c of comps) {
+      if (!allowedGroups.has(c.item.groupId))
+        throw new OrderError(`Complemento inválido para ${product.name}.`);
+    }
+    for (const g of allowed) {
+      const qty = comps.filter((c) => c.item.groupId === g.groupId).reduce((s, c) => s + c.quantity, 0);
+      if (g.required && qty === 0)
+        throw new OrderError(`Escolha as opções obrigatórias de ${product.name}.`);
+      if (g.min > 0 && qty < g.min)
+        throw new OrderError(`Selecione ao menos ${g.min} opção(ões) em ${product.name}.`);
+      if (g.max > 0 && qty > g.max)
+        throw new OrderError(`Máximo de ${g.max} opção(ões) por grupo em ${product.name}.`);
+    }
 
     const compsTotal = comps.reduce((s, c) => s + c.item.price * c.quantity, 0);
     const unitPrice = base;
@@ -241,38 +265,44 @@ export async function createOrder(input: CreateOrderInput) {
           .join(", ")
       : null;
 
-  const code = await generateOrderCode(store.id);
-
-  const order = await prisma.order.create({
-    data: {
-      storeId: store.id,
-      code,
-      type: input.type,
-      channel: input.channel ?? "ONLINE",
-      status: "NEW",
-      customerId,
-      customerName: input.customer?.name,
-      customerPhone: input.customer?.phone,
-      addressId,
-      addressSnapshot,
-      comanda: input.comanda,
-      attendant: input.attendant,
-      paymentMethod: input.paymentMethod ?? null,
-      changeFor: input.changeFor ?? null,
-      subtotal,
-      deliveryFee,
-      paymentFee,
-      discount,
-      surcharge,
-      tip,
-      total,
-      couponId,
-      note: input.note,
-      scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
-      items: { create: itemsData },
-    },
-    include: { items: { include: { complements: true } } },
-  });
-
-  return order;
+  // Cria o pedido com retry: se dois pedidos colidirem no código (corrida), regenera
+  for (let attempt = 0; ; attempt++) {
+    const code = await generateOrderCode(store.id);
+    try {
+      return await prisma.order.create({
+        data: {
+          storeId: store.id,
+          code,
+          type: input.type,
+          channel: input.channel ?? "ONLINE",
+          status: "NEW",
+          customerId,
+          customerName: input.customer?.name,
+          customerPhone: input.customer?.phone,
+          addressId,
+          addressSnapshot,
+          comanda: input.comanda,
+          attendant: input.attendant,
+          paymentMethod: input.paymentMethod ?? null,
+          changeFor: input.changeFor ?? null,
+          subtotal,
+          deliveryFee,
+          paymentFee,
+          discount,
+          surcharge,
+          tip,
+          total,
+          couponId,
+          note: input.note,
+          scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+          items: { create: itemsData },
+        },
+        include: { items: { include: { complements: true } } },
+      });
+    } catch (e) {
+      const dup = !!e && typeof e === "object" && "code" in e && (e as { code?: string }).code === "P2002";
+      if (dup && attempt < 4) continue;
+      throw e;
+    }
+  }
 }

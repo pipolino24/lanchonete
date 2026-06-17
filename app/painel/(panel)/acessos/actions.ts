@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 
 const ROLES = ["OWNER", "MANAGER", "STAFF"] as const;
 type Role = (typeof ROLES)[number];
+const MANAGE = ["OWNER", "MANAGER"]; // quem pode gerenciar acessos
 
 export async function criarUsuario(formData: FormData) {
-  const session = await requireSession();
+  const session = await requireRole(MANAGE);
 
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "")
@@ -48,7 +49,7 @@ export async function criarUsuario(formData: FormData) {
 }
 
 export async function alternarUsuario(id: string) {
-  const session = await requireSession();
+  const session = await requireRole(MANAGE);
 
   const user = await prisma.user.findFirst({
     where: { id, storeId: session.storeId },
@@ -75,7 +76,7 @@ export async function alternarUsuario(id: string) {
 }
 
 export async function excluirUsuario(id: string) {
-  const session = await requireSession();
+  const session = await requireRole(MANAGE);
 
   // não permita excluir o próprio usuário da sessão.
   if (id === session.id) return;

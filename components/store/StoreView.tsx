@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ShoppingBag, Star, Search, X } from "lucide-react";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CategoryNav } from "@/components/store/CategoryNav";
@@ -57,7 +57,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
     useCart.getState().setStore(data.slug);
   }, [data.slug]);
 
-  const q = query.trim().toLowerCase();
+  const deferredQuery = useDeferredValue(query);
+  const q = deferredQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!q) return null;
     const all = data.categories.flatMap((c) =>
@@ -147,7 +148,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
                         measure={measureOf(product)}
                         prepTimeInMinutes={data.prepTime}
                         featured={product.featured}
-                        onAdd={() => setSelectedProduct(product.id)}
+                        productId={product.id}
+                        onAdd={setSelectedProduct}
                       />
                     ))}
                   </div>
@@ -201,7 +203,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
                         measure={measureOf(p)}
                         prepTimeInMinutes={data.prepTime}
                         featured={p.featured}
-                        onAdd={() => setSelectedProduct(p.id)}
+                        productId={p.id}
+                        onAdd={setSelectedProduct}
                       />
                     ))}
                   </div>

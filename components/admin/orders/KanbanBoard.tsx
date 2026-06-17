@@ -102,10 +102,19 @@ export function KanbanBoard({ orders, drivers = [] }: { orders: KanbanOrder[]; d
   const [detail, setDetail] = useState<KanbanOrder | null>(null);
   const [, startTransition] = useTransition();
 
-  // Atualização automática
+  // Atualização automática — pausa quando a aba está oculta (não desperdiça query)
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), 20000);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 20000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
 
   // Mantém o slide-over sincronizado com os dados após refresh/ações

@@ -19,7 +19,8 @@ interface MenuItemCardProps {
   measure?: string | null; // ex.: "730g · Serve 1"
   prepTimeInMinutes?: number | null;
   featured?: boolean;
-  onAdd: () => void;
+  productId: string;
+  onAdd: (id: string) => void;
 }
 
 const cardVariants = {
@@ -27,7 +28,7 @@ const cardVariants = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
 
-export function MenuItemCard({
+export const MenuItemCard = React.memo(function MenuItemCard({
   className,
   imageUrl,
   emoji,
@@ -38,6 +39,7 @@ export function MenuItemCard({
   measure,
   prepTimeInMinutes,
   featured,
+  productId,
   onAdd,
 }: MenuItemCardProps) {
   const savings = originalPrice && originalPrice > price ? originalPrice - price : 0;
@@ -79,7 +81,7 @@ export function MenuItemCard({
         className="group surface relative flex w-full flex-col overflow-hidden rounded-2xl shadow-warm transition-shadow duration-200 hover:shadow-[0_24px_50px_-14px_rgba(0,0,0,0.6),0_8px_22px_-8px_rgba(242,106,31,0.28)]"
       >
         {/* Imagem + botão Adicionar */}
-        <button onClick={onAdd} className="relative block overflow-hidden text-left" aria-label={`Adicionar ${name}`}>
+        <button onClick={() => onAdd(productId)} className="relative block overflow-hidden text-left" aria-label={`Adicionar ${name}`}>
           <div className="relative h-40 w-full overflow-hidden">
             <div className="absolute inset-0 transition-transform duration-300 ease-out group-hover:scale-105">
               <ProductImage src={imageUrl} alt={name} emoji={emoji} sizes="(max-width:640px) 50vw, 240px" />
@@ -107,7 +109,7 @@ export function MenuItemCard({
         </button>
 
         {/* Conteúdo */}
-        <button onClick={onAdd} className="flex flex-grow flex-col p-3 text-left">
+        <button onClick={() => onAdd(productId)} className="flex flex-grow flex-col p-3 text-left">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-bold text-ember-400">{formatPrice(price)}</span>
             {originalPrice && originalPrice > price && (
@@ -129,4 +131,4 @@ export function MenuItemCard({
       </motion.div>
     </div>
   );
-}
+});

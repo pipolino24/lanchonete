@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getVerifiedPhone } from "@/lib/otp";
+import { getVerifiedPhone, clearVerifiedCookie } from "@/lib/otp";
 
 const schema = z.object({
   phone: z.string().min(8),
@@ -32,6 +32,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     update: { name, cpf, birthDate, verifiedAt: new Date() },
     create: { storeId: store.id, name, phone, cpf, birthDate, verifiedAt: new Date() },
   });
+
+  // cookie de verificação é de uso único — invalida após o cadastro
+  await clearVerifiedCookie();
 
   return NextResponse.json({ ok: true });
 }

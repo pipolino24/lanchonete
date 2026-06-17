@@ -68,6 +68,15 @@ export async function requireSession(): Promise<SessionUser> {
   return session;
 }
 
+/** Exige sessão + um dos cargos informados (ex.: gestão de acessos). */
+export async function requireRole(roles: string[]): Promise<SessionUser> {
+  const session = await requireSession();
+  if (!roles.includes(session.role)) {
+    throw new Error("Você não tem permissão para esta ação.");
+  }
+  return session;
+}
+
 export async function verifyCredentials(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (!user || !user.active) return null;

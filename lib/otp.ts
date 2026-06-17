@@ -88,6 +88,12 @@ export async function setVerifiedCookie(storeId: string, phone: string): Promise
   });
 }
 
+/** Invalida o cookie de verificação (uso único após o cadastro). */
+export async function clearVerifiedCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(CUST_COOKIE);
+}
+
 /** Retorna o telefone verificado por cookie para esta loja (ou null). */
 export async function getVerifiedPhone(storeId: string): Promise<string | null> {
   const store = await cookies();

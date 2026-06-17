@@ -205,6 +205,9 @@ model Customer {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name      String
   phone     String
+  cpf       String?
+  birthDate String?
+  verifiedAt DateTime?
   notes     String?
   createdAt DateTime @default(now())
 

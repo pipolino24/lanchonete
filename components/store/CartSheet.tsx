@@ -217,8 +217,8 @@ export function CartSheet({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
       });
-      if (res.status === 404) {
-        // backend ainda não publicado → modo preview
+      if (res.status === 404 || res.status === 503) {
+        // serviço de OTP ainda não configurado → modo preview
         setDemo(true);
         setStep("code");
         return;

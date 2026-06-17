@@ -22,9 +22,18 @@ export function otpConfigured(): boolean {
   return OTP_KEY.length > 0;
 }
 
-/** Para o serviço: DDI+DDD+número (ex.: 5588912345678). */
+/**
+ * Normaliza para DDI+DDD+número (ex.: 5588912345678).
+ * Decide por TAMANHO, não por prefixo — senão um DDD 55 (ex.: RS) seria
+ * confundido com o DDI 55 e o país ficaria faltando.
+ */
 export function normalizePhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
+  // Já tem DDI 55: 12 (fixo) ou 13 (celular) dígitos começando com 55
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) return d;
+  // Sem DDI: 10 (fixo) ou 11 (celular) dígitos = DDD+número → prefixa 55
+  if (d.length === 10 || d.length === 11) return "55" + d;
+  // Fallback
   return d.startsWith("55") ? d : "55" + d;
 }
 

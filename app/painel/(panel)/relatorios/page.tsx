@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { startOfTodayBR, startOfDaysAgoBR } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -40,15 +41,10 @@ function normalizePeriodo(value?: string): Periodo {
 }
 
 function gteForPeriodo(periodo: Periodo): Date {
-  const gte = new Date();
-  if (periodo === "hoje") {
-    gte.setHours(0, 0, 0, 0);
-  } else if (periodo === "7dias") {
-    gte.setDate(gte.getDate() - 7);
-  } else {
-    gte.setDate(gte.getDate() - 30);
-  }
-  return gte;
+  // Limites no fuso de Brasília (não no UTC do servidor)
+  if (periodo === "hoje") return startOfTodayBR();
+  if (periodo === "7dias") return startOfDaysAgoBR(7);
+  return startOfDaysAgoBR(30);
 }
 
 const TYPE_LABEL: Record<string, string> = {

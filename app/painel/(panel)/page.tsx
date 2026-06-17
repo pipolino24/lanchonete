@@ -2,6 +2,7 @@ import { DollarSign, ClipboardList, Users, TrendingUp } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
+import { startOfTodayBR, startOfDaysAgoBR } from "@/lib/tz";
 import { PageHeader, StatCard, Card } from "@/components/admin/ui";
 import { NumberTicker } from "@/components/ui/NumberTicker";
 
@@ -11,10 +12,9 @@ export default async function DashboardPage() {
   const session = await requireSession();
   const storeId = session.storeId;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const last7 = new Date();
-  last7.setDate(last7.getDate() - 7);
+  // Limites no fuso de Brasília (não no UTC do servidor)
+  const today = startOfTodayBR();
+  const last7 = startOfDaysAgoBR(7);
 
   const [todayOrders, totalCustomers, last7Orders, recentOrders] = await Promise.all([
     prisma.order.findMany({

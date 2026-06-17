@@ -91,7 +91,9 @@ export async function salvarProduto(formData: FormData) {
 
   const priceCents = parseToCents(str(formData.get("price")));
   const promoRaw = str(formData.get("promoPrice"));
-  const promoPrice = promoRaw.length ? parseToCents(promoRaw) : null;
+  const promoParsed = promoRaw.length ? parseToCents(promoRaw) : null;
+  // Promoção só vale se for MENOR que o preço cheio (senão ignora)
+  const promoPrice = promoParsed != null && promoParsed > 0 && promoParsed < priceCents ? promoParsed : null;
 
   const data = {
     type: toProductType(formData.get("type")),

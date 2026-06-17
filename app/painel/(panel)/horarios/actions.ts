@@ -21,6 +21,9 @@ export async function salvarHorario(formData: FormData) {
   const openTime = normalizeTime(formData.get("openTime"), "18:00");
   const closeTime = normalizeTime(formData.get("closeTime"), "23:00");
 
+  // abre == fecha seria interpretado como "aberto 24h" — ignora salvamento inválido
+  if (openTime === closeTime) return;
+
   // Sem unique em [storeId, weekday]: faz findFirst + update/create.
   const existing = await prisma.businessHour.findFirst({
     where: { storeId: session.storeId, weekday },

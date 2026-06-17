@@ -86,6 +86,16 @@ function newLineId() {
   return `line_${Date.now()}_${counter}`;
 }
 
+/** Assinatura para mesclar linhas idênticas (mesmo produto, adicionais, removidos, obs). */
+function lineSig(l: Omit<CartLine, "lineId">): string {
+  const comps = l.complements
+    .map((c) => `${c.itemId}:${c.quantity}`)
+    .sort()
+    .join(",");
+  const rem = [...l.removedIngredients].sort().join(",");
+  return `${l.productId}|${l.unitPrice}|${comps}|${rem}|${(l.note ?? "").trim()}`;
+}
+
 export const useCart = create<CartState>()(
   persist(
     (set) => ({
@@ -100,7 +110,16 @@ export const useCart = create<CartState>()(
         set((s) => (s.storeSlug === slug ? s : { storeSlug: slug, items: [] })),
 
       addItem: (line) =>
-        set((s) => ({ items: [...s.items, { ...line, lineId: newLineId() }] })),
+        set((s) => {
+          const sig = lineSig(line);
+          const idx = s.items.findIndex((it) => lineSig(it) === sig);
+          if (idx >= 0) {
+            const items = s.items.slice();
+            items[idx] = { ...items[idx], quantity: items[idx].quantity + line.quantity };
+            return { items };
+          }
+          return { items: [...s.items, { ...line, lineId: newLineId() }] };
+        }),
 
       updateQty: (lineId, delta) =>
         set((s) => ({
@@ -120,7 +139,9 @@ export const useCart = create<CartState>()(
       setScheduledFor: (scheduledFor) => set({ scheduledFor }),
       clear: () => set({ items: [] }),
     }),
-    { name: "cariri-cart" },
+    // skipHydration: o cliente começa igual ao SSR (vazio) e reidrata no mount
+    // (evita mismatch de hidratação com carrinho persistido)
+    { name: "cariri-cart", skipHydration: true },
   ),
 );
 

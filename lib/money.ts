@@ -14,13 +14,17 @@ export function formatAmount(cents: number): string {
   });
 }
 
-/** Converte um texto digitado ("39,00", "R$ 1.299,90") em centavos. */
+/**
+ * Converte um texto digitado ("39,00", "R$ 1.299,90") em centavos.
+ * Nunca retorna negativo — preços/taxas/descontos são sempre ≥ 0
+ * (evita preço/desconto negativo corromper o pedido).
+ */
 export function parseToCents(input: string | number): number {
-  if (typeof input === "number") return Math.round(input * 100);
+  if (typeof input === "number") return Math.max(0, Math.round(input * 100));
   const cleaned = input
-    .replace(/[^0-9.,-]/g, "")
+    .replace(/[^0-9.,]/g, "") // remove tudo menos dígitos, ponto e vírgula (sem sinal)
     .replace(/\.(?=\d{3}(\D|$))/g, "")
     .replace(",", ".");
   const value = parseFloat(cleaned);
-  return Number.isNaN(value) ? 0 : Math.round(value * 100);
+  return Number.isNaN(value) || value < 0 ? 0 : Math.round(value * 100);
 }

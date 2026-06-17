@@ -32,7 +32,7 @@ export async function alternarPagamento(
 export async function salvarTaxa(method: PaymentMethod, percent: number) {
   const session = await requireSession();
 
-  const safe = Number.isFinite(percent) && percent >= 0 ? percent : 0;
+  const safe = Number.isFinite(percent) ? Math.min(Math.max(0, percent), 100) : 0;
 
   await prisma.paymentConfig.update({
     where: { storeId_method: { storeId: session.storeId, method } },

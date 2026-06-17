@@ -5,6 +5,9 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+if (!process.env.AUTH_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("AUTH_SECRET é obrigatório em produção (sessões usariam um segredo público).");
+}
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "dev_secret_change_me_please_min_32_chars_long",
 );

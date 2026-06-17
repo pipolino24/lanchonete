@@ -265,6 +265,20 @@ export async function createOrder(input: CreateOrderInput) {
           .join(", ")
       : null;
 
+  // Mesa (DINEIN pelo balcão): vincula a mesa e marca como ocupada
+  let tableId: string | null = null;
+  if (input.tableNumber != null) {
+    const table = await prisma.restaurantTable.findUnique({
+      where: { storeId_number: { storeId: store.id, number: input.tableNumber } },
+    });
+    if (table) {
+      tableId = table.id;
+      if (table.status !== "OCCUPIED") {
+        await prisma.restaurantTable.update({ where: { id: table.id }, data: { status: "OCCUPIED" } });
+      }
+    }
+  }
+
   // Cria o pedido com retry: se dois pedidos colidirem no código (corrida), regenera
   for (let attempt = 0; ; attempt++) {
     const code = await generateOrderCode(store.id);
@@ -281,6 +295,7 @@ export async function createOrder(input: CreateOrderInput) {
           customerPhone: input.customer?.phone,
           addressId,
           addressSnapshot,
+          tableId,
           comanda: input.comanda,
           attendant: input.attendant,
           paymentMethod: input.paymentMethod ?? null,

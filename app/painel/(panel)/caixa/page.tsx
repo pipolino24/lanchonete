@@ -109,12 +109,14 @@ export default async function CaixaPage() {
     .filter((m) => m.type === "OUT")
     .reduce((s, m) => s + m.amount, 0);
 
-  // Vendas em dinheiro: pedidos pagos em CASH, não cancelados, criados após a abertura.
+  // Vendas em dinheiro NO BALCÃO desde a abertura do caixa.
+  // Exclui DELIVERY (pago ao entregador, não entra na gaveta).
   const cashOrders = await prisma.order.findMany({
     where: {
       storeId,
       paymentMethod: "CASH",
       status: { not: "CANCELED" },
+      type: { not: "DELIVERY" },
       createdAt: { gte: register.openedAt },
     },
     select: { total: true },

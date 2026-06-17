@@ -10,7 +10,8 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
   const n = parseInt(raw, 10);
-  return Number.isNaN(n) ? null : n;
+  // negativo = inválido → sem limite (evita cupom "morto")
+  return Number.isNaN(n) || n < 0 ? null : n;
 }
 
 function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
@@ -51,20 +52,29 @@ export async function salvarCupom(formData: FormData) {
   const startsAt = parseOptionalDate(formData.get("startsAt"));
   const endsAt = parseOptionalDate(formData.get("endsAt"));
 
-  await prisma.coupon.create({
-    data: {
-      storeId: session.storeId,
-      code,
-      discountType,
-      discountValue,
-      minOrder,
-      freeShipping,
-      perCustomerLimit,
-      totalLimit,
-      startsAt,
-      endsAt,
-    },
-  });
+  // Janela inválida (fim antes do início) → não cria
+  if (startsAt && endsAt && endsAt < startsAt) return;
+
+  try {
+    await prisma.coupon.create({
+      data: {
+        storeId: session.storeId,
+        code,
+        discountType,
+        discountValue,
+        minOrder,
+        freeShipping,
+        perCustomerLimit,
+        totalLimit,
+        startsAt,
+        endsAt,
+      },
+    });
+  } catch (e) {
+    // código duplicado (P2002) — não derruba a página
+    if (!(e && typeof e === "object" && "code" in e && (e as { code?: string }).code === "P2002")) throw e;
+    return;
+  }
 
   revalidatePath("/painel/cupons");
 }

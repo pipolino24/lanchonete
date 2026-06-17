@@ -5,10 +5,9 @@ const nextConfig: NextConfig = {
     root: import.meta.dirname,
   },
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "d34gyq4l8no8gs.cloudfront.net" },
-    ],
+    // O lojista cola URLs de fotos de qualquer host no painel — libera https geral
+    // (o ProductImage já tem fallback de emoji se a imagem falhar).
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
 };
 

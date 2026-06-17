@@ -54,6 +54,8 @@ export function StoreView({ data }: { data: StoreViewData }) {
   const subtotal = cartSubtotal(items);
 
   useEffect(() => {
+    // reidrata o carrinho persistido (skipHydration) antes de fixar a loja
+    useCart.persist.rehydrate();
     useCart.getState().setStore(data.slug);
   }, [data.slug]);
 

@@ -19,12 +19,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const r = await sendOtp(parsed.data.phone);
   if (!r.ok) {
-    const map: Record<string, string> = {
-      "rate-limit": "Aguarde um momento para reenviar o código.",
-      cooldown: "Aguarde alguns segundos para reenviar.",
-      unreachable: "Serviço de WhatsApp indisponível. Tente novamente.",
-    };
-    return NextResponse.json({ error: map[r.error ?? ""] || "Não foi possível enviar o código." }, { status: 400 });
+    const raw = (r.error ?? "").toLowerCase();
+    let msg: string;
+    if (raw === "unreachable") msg = "Serviço de WhatsApp indisponível. Tente em instantes.";
+    else if (raw === "not-configured") msg = "OTP não configurado.";
+    else if (raw.includes("aguard") || raw.includes("segundo") || raw.includes("rate") || raw.includes("limit") || raw.includes("spam") || raw.includes("muitas"))
+      msg = "Você pediu o código há pouco. Aguarde até 1 minuto e tente de novo.";
+    else if (raw.includes("invalid") || raw.includes("inval")) msg = "Número de WhatsApp inválido. Confira o DDD e o número.";
+    else msg = r.error ? `Não foi possível enviar: ${r.error}` : "Não foi possível enviar o código.";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
   return NextResponse.json({ ok: true });
 }

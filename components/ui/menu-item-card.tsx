@@ -48,8 +48,8 @@ export function MenuItemCard({
   const my = useMotionValue(0);
   const sx = useSpring(mx, { stiffness: 110, damping: 22, mass: 0.5 });
   const sy = useSpring(my, { stiffness: 110, damping: 22, mass: 0.5 });
-  const rotateX = useTransform(sy, [-0.5, 0.5], [5.6, -5.6]);
-  const rotateY = useTransform(sx, [-0.5, 0.5], [-5.6, 5.6]);
+  const rotateX = useTransform(sy, [-0.5, 0.5], [8.4, -8.4]);
+  const rotateY = useTransform(sx, [-0.5, 0.5], [-8.4, 8.4]);
 
   function onMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = ref.current;
